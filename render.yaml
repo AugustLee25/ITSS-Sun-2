@@ -1,0 +1,25 @@
+# Render Blueprint: BE (Spring Boot, profile demo) + PostgreSQL free.
+services:
+  - type: web
+    name: hanare-be
+    runtime: docker
+    rootDir: BE
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DB_HOST
+        fromDatabase: { name: hanare-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: hanare-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: hanare-db, property: database }
+      - key: HANARE_DB_USER
+        fromDatabase: { name: hanare-db, property: user }
+      - key: HANARE_DB_PASSWORD
+        fromDatabase: { name: hanare-db, property: password }
+
+databases:
+  - name: hanare-db
+    plan: free
+    databaseName: hanare
