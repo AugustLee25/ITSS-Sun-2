@@ -1,0 +1,107 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-caption);
+  color: var(--color-text-muted);
+}
+
+.breadcrumbs a {
+  color: var(--color-text-muted);
+}
+
+.breadcrumbs a:hover {
+  color: var(--color-primary-hover);
+}
+
+.breadcrumbs [aria-current='page'] {
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.titleWrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.title {
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.status {
+  display: inline-flex;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.description {
+  max-width: 72ch;
+  color: var(--color-text-muted);
+}
+
+/* Nút quay lại chỉ có ở mobile; desktop dùng breadcrumb */
+.back {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  flex: none;
+  margin-left: calc(-1 * var(--space-3));
+  border-radius: var(--radius-input);
+  color: var(--color-text);
+}
+
+@media (max-width: 767.98px) {
+  .header {
+    margin-bottom: var(--space-4);
+  }
+
+  .back {
+    display: inline-flex;
+  }
+
+  .breadcrumbs {
+    display: none;
+  }
+
+  .titleWrap {
+    width: 100%;
+  }
+
+  .title {
+    flex: 1 1 8rem;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions > * {
+    flex: 1 1 auto;
+  }
+}

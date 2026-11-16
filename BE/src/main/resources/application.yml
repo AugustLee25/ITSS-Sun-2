@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: hanare-be
+  datasource:
+    url: ${HANARE_DB_URL:jdbc:postgresql://localhost:5432/hanare}
+    username: ${HANARE_DB_USER:hanare}
+    password: ${HANARE_DB_PASSWORD:}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  web:
+    resources:
+      add-mappings: false
+
+server:
+  port: 8080
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+hanare:
+  jwt:
+    # Bắt buộc >= 32 byte; chỉ profile dev/test có giá trị mặc định.
+    secret: ${HANARE_JWT_SECRET:}
+    ttl: PT8H
+  cors:
+    allowed-origins: http://localhost:5173

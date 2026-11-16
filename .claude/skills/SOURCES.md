@@ -1,0 +1,16 @@
+# Nguồn skill (phạm vi PROJECT, ngày cài 15/11/2026)
+
+Mọi skill chỉ gồm file văn bản (.md/.json/LICENSE). Đã đọc SKILL.md và quét toàn bộ file đi kèm: không có script, không `curl|sh`, không đọc/gửi credential, không ký tự Unicode ẩn, không chú thích HTML ẩn. Không có file thực thi nào được copy.
+
+| Skill | Nguồn | Commit | Ghi chú |
+|---|---|---|---|
+| `frontend-design` | https://github.com/anthropics/skills/tree/main/skills/frontend-design | `1780c5e5a552fd4d1c9d6a7b0cab26b0c2bef064` (14/11/2026) | Nguyên bản (SKILL.md + LICENSE.txt). Khi mâu thuẫn, design tokens trong spec mục 2 thắng; chỉ dùng phần "quality floor", viết UI copy, không dùng để đổi bộ nhận diện đã chốt. |
+| `react-best-practices` | https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices | `1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62` (27/10/2026), MIT theo frontmatter | **Đã cắt gọn** cho SPA Vite: bỏ `server-*`, `async-api-routes`, `async-suspense-boundaries`, `async-dependencies`, `client-swr-dedup`, `client-event-listeners`, `rendering-hydration-*`, `rendering-script-defer-async`, `bundle-analyzable-paths`, `bundle-defer-third-party`, `AGENTS.md` (112 KB). SKILL.md viết lại danh mục + ghi chú thích nghi; các file `rules/*.md` còn lại là nguyên bản. |
+| `composition-patterns` | https://github.com/vercel-labs/agent-skills/tree/main/skills/composition-patterns | `1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62`, MIT theo frontmatter | Nguyên bản (bỏ `_template.md`). Hữu ích cho thành phần dùng chung spec 2.3 (compound components, tránh boolean props, API React 19 không `forwardRef`). |
+| `web-design-guidelines` | https://github.com/vercel-labs/agent-skills/tree/main/skills/web-design-guidelines (SKILL.md gốc) + https://github.com/vercel-labs/web-interface-guidelines (`command.md`) | agent-skills `1a2c79d…`; guidelines `434b7f91364665f2f733b310ec54809bf8f37937` (05/10/2026), MIT | **Đã sửa an toàn:** bản gốc `WebFetch` file hướng dẫn từ GitHub raw mỗi lần chạy (tải chỉ thị từ xa chưa duyệt). Thay bằng bản chụp cố định `guidelines.md` (= `command.md` nguyên văn, đã đọc toàn bộ) + SKILL.md mới kèm mục "HANARE adaptations" (UI tiếng Việt, bỏ Title Case/Hydration). Không copy `install.sh`. |
+
+## Đã xem và loại
+- `piomin/claude-ai-spring-boot` (commit `31fe1d5`, https://github.com/piomin/claude-ai-spring-boot): tác giả uy tín, văn bản thuần, nhưng lệch hẳn quyết định dự án: nội dung xoay quanh Spring Data JPA/Hibernate (`data.md`, `jpa-patterns`), WebFlux, Testcontainers, Spring Security 6, Cloud/K8s (~170 KB); không có `JdbcClient`, không có `zonky`. Cài vào sẽ dẫn agent BE sang JPA, trái brief. Phần hữu ích (ghi chú Boot 4: `@MockitoBean`, Problem Details) đã gom vào `docs/RESEARCH.md`.
+- `jabrena/plinth`, `jdubois/dr-jskill` và các bản sao trên tessl.io/skills.sh/skillsmp: bên thứ ba, hoặc JPA-centric, hoặc không còn skill Flyway tương ứng trong repo hiện tại, hoặc chỉ có bản sao qua trang tổng hợp (không kiểm chứng được nguồn gốc) → không cài.
+- `anthropics/skills` khác (`webapp-testing` có script Playwright, `web-artifacts-builder`, v.v.) và `vercel-labs/agent-skills` khác (`deploy-to-vercel`, `vercel-cli-with-tokens`, `react-native-skills`): không liên quan hoặc có script/credential.
+- Không có skill Spring Boot 4 / JdbcClient / Flyway đủ uy tín và khớp stack: BE dựa vào `docs/RESEARCH.md`.

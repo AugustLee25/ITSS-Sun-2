@@ -1,0 +1,42 @@
+.box {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-error-soft);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-card);
+  color: var(--color-error-text);
+}
+
+.warning {
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+
+.icon {
+  flex: none;
+  margin-top: 2px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.title {
+  font-weight: var(--font-weight-bold);
+}
+
+.trace {
+  font-size: var(--font-size-small);
+  opacity: 0.9;
+  overflow-wrap: anywhere;
+}
+
+.retry {
+  margin-top: var(--space-1);
+}

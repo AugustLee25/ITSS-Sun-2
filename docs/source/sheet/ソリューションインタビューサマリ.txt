@@ -1,0 +1,51 @@
+A1: 1. 回答分析
+B2: No | C2: 質問 | D2: 回答の分類 | E2: 回答の分析
+B3: 1.0 | C3: 学部と学年を教えてください。
+
+Bạn đang học ngành nào, khóa bao nhiêu?
+B4: 2.0 | C4: （アプリに触ってもらった後に）
+このアプリをどのように理解していますか？
+
+(Sau khi cho đối phương dùng thử ứng dụng)
+Bạn đang hiểu như thế nào về ứng dụng này?
+B5: 3.0 | C5: （提供する価値を相手が理解した状態で）
+このアプリが提供する価値は、あなたにとってどの程度魅力的ですか？
+また、なぜそのように思いましたか？
+
+(Khi mà đối phương đã hiểu được giá trị sản phẩm mang lại)
+Giá trị mà ứng dụng này mang lại đã hấp dẫn bạn ra sao? Và tại sao bạn lại nghĩ như vậy?
+B6: 4.0 | C6: 実際の日常生活や業務の中で、このアプリをどのような場面で使うと思いますか？
+
+Trong cuộc sống hay công việc hàng ngày, bạn nghĩ mình sẽ sử dụng ứng dụng này trong những tình huống nào?
+B7: 5.0 | C7: 提案されている機能の中で、最も重要だと思うものは何ですか？どうしてそう思いましたか？
+
+Trong số các tính năng chúng mình đã đề xuất thì theo bạn đâu là tính năng quan trọng nhất? Tại sao bạn lại nghĩ như vậy?
+B8: 6.0 | C8: この問題／課題を解決するために、どのような点を変更する必要があると思いますか？どうしてそう思いましたか？
+
+Để giải quyết vấn đề / thách thức này thì theo bạn ứng dụng cần phải thay đổi ở điểm nào? Tại sao bạn lại nghĩ như vậy?
+B9: 7.0 | C9: 他の類似アプリと比較して、このアプリの優れている点や劣っている点は何だと思いますか？
+
+So với những ứng dụng tương tự thì theo bạn đâu là điểm vượt trội / điểm còn thua kém hơn của ứng dụng này?
+A11: 2. 解決策と機能の定義
+C12: プロブレムインタビュー結果
+（ソリューションインタビュー実施前）
+B13: 問題 (problem) | C13: 大学のグループ課題では、役割や締切を決めていても、実際の進捗確認がメンバーの自主報告や会議に依存している場合があります。作業の遅れや未完了、連絡が取れない状況が発生すると、必要な情報が不足したり、対応の判断が遅れたりすることがあります。その結果、締切直前に作業が集中し、一部のメンバーが他の人の仕事を引き受けたり、課題の内容を削減したりすることで、負担や不公平感が生じています。
+Trong một số nhóm làm bài tập lớn, dù đã phân chia nhiệm vụ và deadline, việc xác nhận tiến độ thực tế vẫn phụ thuộc nhiều vào báo cáo tự giác hoặc các buổi họp. Khi thành viên chậm tiến độ, không hoàn thành nhiệm vụ hoặc không phản hồi, nhóm có thể thiếu thông tin hoặc chậm đưa ra phương án xử lý. Điều này khiến công việc bị dồn vào giai đoạn cuối, một số thành viên phải làm thay phần việc của người khác hoặc nhóm phải cắt giảm nội dung, gây áp lực và cảm giác bất công.
+B14: 課題 (challenge)① | C14: 他のメンバーの進捗がはっきりしないときでも、締め切りへの不安に振り回されず、今後の見通しを持って安心して自分の作業に取り組めるようにすること。
+Ngay cả khi chưa nắm rõ tiến độ của các thành viên khác, mỗi người không bị nỗi lo deadline chi phối, có được sự hình dung về tình hình sắp tới và yên tâm thực hiện công việc của mình.
+B15: 課題①の解決策 (solution) | C15: Giúp các thành viên yên tâm về tiến độ chung bằng cách tạo sự tin cậy vào những cam kết công việc và phát hiện sớm nguy cơ chậm trễ, để nhóm có thể chủ động ứng phó thay vì chỉ nhận ra vấn đề khi gần deadline.
+B16: 課題①の解決策を実現するための
+機能 (function) | C16: Thiết lập và xác nhận kế hoạch công việc
+C17: Checkpoint định kỳ và nhắc nhở cập nhật
+C18: Phát hiện nguy cơ và yêu cầu hỗ trợ
+B21: 課題 (challenge)② | C21: 担当者が作業を終えない、または連絡が取れないときでも、一部のメンバーだけが負担を背負わされているという不公平感を抱かず、一人ひとりの時間や努力が尊重されていると感じながら協力できるようにすること。
+Ngay cả khi người phụ trách không hoàn thành công việc hoặc không thể liên lạc, giúp các thành viên không cảm thấy bất công vì gánh nặng bị đẩy lên một số người, đồng thời có thể tiếp tục hợp tác với cảm nhận rằng thời gian và nỗ lực của từng người đều được tôn trọng.
+B22: 課題②の解決策 (solution) | C22: Biến việc hỗ trợ khi nhóm gặp khó khăn từ một trách nhiệm bị đẩy sang một số cá nhân thành sự hợp tác dựa trên lựa chọn tự nguyện và sự công nhận lẫn nhau. Khi mỗi người có quyền quyết định mức độ hỗ trợ, đồng thời những đóng góp phát sinh được ghi nhận và cân bằng một cách minh bạch, các thành viên có thể cảm thấy thời gian và nỗ lực của mình được tôn trọng thay vì bị lợi dụng.
+B23: 課題②の解決策を実現するための
+機能 (function) | C23: Đăng công việc cần hỗ trợ: Khi có phần việc chưa hoàn thành, thành viên hoặc TL đăng một yêu cầu hỗ trợ, nêu rõ công việc cần làm, thời hạn và công sức dự kiến.
+C24: Tự nguyện nhận hỗ trợ: Các thành viên xem danh sách công việc cần hỗ trợ và chủ động lựa chọn phần mình có thể làm, không bị tự động giao thêm việc.
+C25: Ghi nhận đóng góp và thỏa thuận bù đắp: Sau khi hỗ trợ, thành viên gửi kết quả. Nhóm xác nhận công việc đã hoàn thành và ghi lại cách bù đắp được hai bên thống nhất.
+C29: ソリューションインタビュー実施後 | D29: 修正した／しなかった根拠
+B30: インタビュー分析結果を踏まえて決定した課題(challenge)
+B34: 解決策 (solution)
+B38: 機能 (function)

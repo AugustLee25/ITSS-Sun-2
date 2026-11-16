@@ -1,0 +1,67 @@
+A1: No | B1: 質問 | C1: 目的 | D1: インタビューのポイント | E1: 1.0 | F1: 2.0 | G1: 3.0 | H1: 4.0 | I1: 5.0 | J1: 6.0 | K1: 7.0 | L1: 8.0 | M1: 9.0 | N1: 10.0 | O1: 11.0 | P1: 12.0 | Q1: 13.0 | R1: 14.0 | S1: 15.0 | T1: 16.0 | U1: 17.0 | V1: 18.0 | W1: 19.0 | X1: 20.0
+A2: 0.0 | B2: （あいさつとインタビュー目的の説明）
+
+(Chào hỏi và giới thiệu mục đích của cuộc phỏng vấn) | C2: インタビュー目的に沿った回答を得る。
+
+Thu thập được những câu trả lời đúng với mục đích của buổi phỏng vấn.
+A3: 1.0 | B3: 学部と学年を教えてください。
+
+Bạn đang học ngành nào, khóa bao nhiêu? | C3: パーソナリティを確認する。
+
+Xác định các đặc điểm của đối tượng. | D3: 問題によっては確認する項目を増やしてもいい。
+性別は重要な要素になることも多いので、メモしておく。
+
+Có thể thêm các câu hỏi xác nhận khác tùy vào vấn đề.
+Hãy note thêm cả giới tính của đối tượng vì đây thường là nhân tố quan trọng.
+A4: 2.0 | B4: （アプリに触ってもらった後に）
+このアプリをどのように理解していますか？
+
+(Sau khi cho đối phương dùng thử ứng dụng)
+Bạn đang hiểu như thế nào về ứng dụng này? | C4: ユーザがアプリのコンセプトや主要機能をどの程度理解しているかを確認する。
+
+Xác nhận xem người dùng đang hiểu ý tưởng của ứng dụng hay các chức năng chính ở mức nào | D4: 前提として、ユーザにこの質問に答えてもらえるレベルのMockを作成する必要がある（以下の質問も同様）。
+直観的な意見をもらうため、アプリの説明をしないで触ってもらうこと。
+インタビュイーがアプリが提供する価値を理解したかどうか確認すること。
+
+Điều kiện tiên quyết là tạo được sản phẩm mô phỏng ở mức độ mà người dùng có thể trả lời được câu hỏi này. (Các câu hỏi bên dưới cũng tương tự)
+Để nhận được ý kiến mang tính trực quan thì hãy để người dùng dùng thử ứng dụng mà không giải thích với họ.
+Xác định xem người dùng có hiểu được giá trị mà ứng dụng mang lại hay không.
+A5: 3.0 | B5: （提供する価値を相手が理解した状態で）
+このアプリが提供する価値は、あなたにとってどの程度魅力的ですか？
+また、なぜそのように思いましたか？
+
+(Khi mà đối phương đã hiểu được giá trị sản phẩm mang lại)
+Giá trị mà ứng dụng này mang lại đã hấp dẫn bạn ra sao? Và tại sao bạn lại nghĩ như vậy? | C5: アプリの価値提案がユーザのニーズや期待に合っているかを評価する。
+
+Đánh giá xem giá trị sản phẩm mang lại có phù hợp với nhu cầu và mong đợi của người dùng hay không. | D5: 「どの程度」と聞いているので、「良い」「悪い」「ものすごく魅力的」などの回答で終わらせないこと。
+例えば、何%なのか？など定量的な回答を探る。
+
+Vì đang muốn biết là "mức độ nào" Nên đừng dừng lại với những câu trả lời kiểu như "Hay", "Dở", "Rất hấp dẫn"
+Ví dụ: Hỏi thêm những câu hỏi mang tính định lượng như "bao nhiêu %"
+A6: 4.0 | B6: 実際の日常生活や業務の中で、このアプリをどのような場面で使うと思いますか？
+
+Trong cuộc sống hay công việc hàng ngày, bạn nghĩ mình sẽ sử dụng ứng dụng này trong những tình huống nào? | C6: アプリがユーザの日常にどう組み込まれるかを理解する。
+
+Hiểu được việc ứng dụng sẽ được sử dụng như nào trong cuộc sống hàng ngày của người dùng | D6: 直観的な意見をもらうため、最初に説明をしないで相手に答えてもらうこと。
+
+Để nhận được ý kiến mang tính trực quan thì hãy không giải thích gì trước mà để đối phương tự trả lời
+A7: 5.0 | B7: 提案されている機能の中で、最も重要だと思うものは何ですか？どうしてそう思いましたか？
+
+
+Trong số các tính năng chúng mình đã đề xuất thì theo bạn đâu là tính năng quan trọng nhất? Tại sao bạn lại nghĩ như vậy? | C7: ユーザが最も価値を感じる機能を特定し、機能の優先順位を設定する。
+
+Xác định xem tính năng quan trọng nhất đối với người dùng là tính năng nào, từ đó thiết lập độ ưu tiên cho các tính năng. | D7: 直観的な意見をもらうため、最初に説明をしないで相手に答えてもらうこと。
+
+Để nhận được ý kiến mang tính trực quan thì hãy không giải thích gì trước mà để đối phương tự trả lời
+A8: 6.0 | B8: この問題／課題を解決するために、どのような点を変更する必要があると思いますか？どうしてそう思いましたか？
+
+Để giải quyết vấn đề / thách thức này thì theo bạn ứng dụng cần phải thay đổi ở điểm nào? Tại sao bạn lại nghĩ như vậy? | C8: アプリの改善点を特定し、具体的な提案を得る。
+
+Thu thập được các đề xuất cụ thể để xác định điểm cần cải thiện của ứng dụng. | D8: 解決策と無関係の回答になったら軌道修正をすること。
+
+Nếu câu trả lời không liên quan đến giải pháp thì hãy  tìm ra một hướng đi khác
+A9: 7.0 | B9: 他の類似アプリと比較して、このアプリの優れている点や劣っている点は何だと思いますか？
+
+So với những ứng dụng tương tự thì theo bạn đâu là điểm vượt trội / điểm còn kém hơn của ứng dụng này? | C9: アプリの競争力を評価し、競合との差別化ポイントを探る。
+
+Đánh giá khả năng cạnh tranh của ứng dụng và khám phá những điểm khác biệt của ứng dụng với các đối thủ cạnh tranh.

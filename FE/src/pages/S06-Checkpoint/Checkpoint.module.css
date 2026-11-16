@@ -1,0 +1,120 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-h3);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.itemInvalid {
+  border-color: var(--color-error);
+}
+
+.itemHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.itemTitle {
+  font-size: var(--font-size-h3);
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.radios legend {
+  margin-bottom: var(--space-2);
+  font-weight: var(--font-weight-medium);
+}
+
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-min);
+  padding: 0 var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-input);
+  cursor: pointer;
+}
+
+.radio:has(input:checked) {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: var(--font-weight-medium);
+}
+
+.radio input {
+  width: 20px;
+  height: 20px;
+}
+
+.error {
+  color: var(--color-error-text);
+  font-size: var(--font-size-caption);
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: var(--space-5);
+  list-style: disc;
+}

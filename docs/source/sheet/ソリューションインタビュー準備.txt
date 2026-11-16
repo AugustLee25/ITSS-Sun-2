@@ -1,0 +1,67 @@
+A1: 3. 課題の定義 / 3. Định nghĩa thách thức
+B2: 問題 (problem) | C2: 大学のグループ課題では、役割や締切を決めていても、実際の進捗確認がメンバーの自主報告や会議に依存している場合があります。作業の遅れや未完了、連絡が取れない状況が発生すると、必要な情報が不足したり、対応の判断が遅れたりすることがあります。その結果、締切直前に作業が集中し、一部のメンバーが他の人の仕事を引き受けたり、課題の内容を削減したりすることで、負担や不公平感が生じています。
+Trong một số nhóm làm bài tập lớn, dù đã phân chia nhiệm vụ và deadline, việc xác nhận tiến độ thực tế vẫn phụ thuộc nhiều vào báo cáo tự giác hoặc các buổi họp. Khi thành viên chậm tiến độ, không hoàn thành nhiệm vụ hoặc không phản hồi, nhóm có thể thiếu thông tin hoặc chậm đưa ra phương án xử lý. Điều này khiến công việc bị dồn vào giai đoạn cuối, một số thành viên phải làm thay phần việc của người khác hoặc nhóm phải cắt giảm nội dung, gây áp lực và cảm giác bất công.
+B3: 感情 | C3: 進捗を把握できないことで、不安やストレス、不便を感じる学生がいました。また、他のメンバーの仕事を代わりに行うことで、怒りや失望、不公平感を感じる人もいました。一方、現在の管理方法に安心している学生もいました。
+Một số sinh viên cảm thấy lo lắng, căng thẳng hoặc bất tiện vì không nắm được tiến độ công việc. Ngoài ra, việc phải làm thay người khác khiến một số người bực mình, thất vọng hoặc cảm thấy bất công. Ngược lại, cũng có sinh viên cảm thấy yên tâm với phương pháp quản lý hiện tại.
+B4: 課題 (challenge)① | C4: 他のメンバーの進捗がはっきりしないときでも、締め切りへの不安に振り回されず、今後の見通しを持って安心して自分の作業に取り組めるようにすること。
+Ngay cả khi chưa nắm rõ tiến độ của các thành viên khác, mỗi người không bị nỗi lo deadline chi phối, có được sự hình dung về tình hình sắp tới và yên tâm thực hiện công việc của mình.
+B5: 課題 (challenge)② | C5: 担当者が作業を終えない、または連絡が取れないときでも、一部のメンバーだけが負担を背負わされているという不公平感を抱かず、一人ひとりの時間や努力が尊重されていると感じながら協力できるようにすること。
+Ngay cả khi người phụ trách không hoàn thành công việc hoặc không thể liên lạc, giúp các thành viên không cảm thấy bất công vì gánh nặng bị đẩy lên một số người, đồng thời có thể tiếp tục hợp tác với cảm nhận rằng thời gian và nỗ lực của từng người đều được tôn trọng.
+A7: 4. 解決策と機能 / 3. Giải pháp và tính năng
+B8: 課題 (challenge)①
+B9: 解決策（全員分）
+Tất cả Solution | D9: → | E9: 解決策 (solution) | F9: → | G9: 解決策を実現する最低限の機能
+Các tính năng tối thiểu để thực hiện giải pháp
+B10: 他のメンバーの進捗がわからなくても、予定どおりに進む場合と遅れる場合の二つのプランを事前に用意する。どちらの場合も次に何をすればよいかわかるため、締め切りへの不安を減らせる。
+Ngay cả khi không biết rõ tiến độ của các thành viên khác, nhóm chuẩn bị trước hai phương án: một khi công việc diễn ra đúng kế hoạch và một khi công việc bị chậm trễ. Nhờ biết mình cần làm gì tiếp theo trong cả hai trường hợp, các thành viên có thể giảm bớt nỗi lo về thời hạn hoàn thành. | E10: Giúp các thành viên yên tâm về tiến độ chung bằng cách tạo sự tin cậy vào những cam kết công việc và phát hiện sớm nguy cơ chậm trễ, để nhóm có thể chủ động ứng phó thay vì chỉ nhận ra vấn đề khi gần deadline. | G10: Thiết lập và xác nhận kế hoạch công việc
+B11: チームで進捗を確認する時間をあらかじめ決める。その時間以外は何度も進捗を気にせず、自分の作業に集中できるようにする。
+Nhóm thống nhất trước những thời điểm cụ thể để kiểm tra tiến độ công việc. Ngoài những thời điểm đó, các thành viên không cần liên tục lo lắng hoặc kiểm tra tiến độ của người khác, từ đó có thể yên tâm tập trung vào phần việc của mình. | G11: Checkpoint định kỳ và nhắc nhở cập nhật
+B12: 作業を始める前に、各メンバーが中間目標と期限を決めて約束する。これにより、頻繁に進捗を確認しなくても、安心して自分の作業に集中できるようにする。
+Trước khi làm việc, các thành viên cam kết mốc trung gian và thời hạn để không phải liên tục kiểm tra tiến độ. | G12: Phát hiện nguy cơ và yêu cầu hỗ trợ
+B13: 普段は頻繁な進捗報告を求めず、遅れや問題が起こりそうなときだけ、早めにチームに知らせるルールを作る。
+Không yêu cầu báo cáo thường xuyên, chỉ cần thông báo sớm khi dự đoán có vấn đề hoặc nguy cơ chậm tiến độ.
+B14: Không công khai tiến độ công việc của những thành viên khác, chỉ cập nhật tiến độ công việc của chính mình và có những lời động viên, khích lệ mỗi khi hoàn thành một task.
+Cập nhật công việc của mình cho các thành viên khác thì luôn đi kèm một câu khẩu hiệu hoặc sticker vui vẻ, khích lệ tinh thần chiến đấu ở cuối cùng.
+
+他のメンバーの進捗は公開せず、自分の進捗のみを更新する仕組みにします。タスクを完了するたびに、モチベーションを高めるねぎらいや励ましのメッセージが表示されます。自分の作業進捗を他のメンバーに共有する際は、必ず最後にスローガン（士気を高める言葉）や楽しいスタンプを添えて、チームの士気を高めるようにします。"
+B15: Không cập nhật thời hạn phải nộp mà cập nhật theo thời gian tăng dần và bắt đầu từ số ngày âm để các thành viên có cảm giác thành tựu vì mình đã làm việc qua số ngày nhất định chứ không phải nghĩ số ngày của mình sắp hết.
+
+締切までの残り時間を更新するのではなく、マイナス日数からスタートして経過時間をカウントアップする方式にします。これにより「残り時間が減っていく」という焦りではなく、「一定の日数（時間）を積み重ねて作業を進めてきた」という達成感を得られるようにします。"
+B16: チームのメンバーが作業の中で達成した小さな成果を共有し、お互いに認め合う。全体の進捗がはっきりしなくても、少しずつ前に進んでいることを実感できるため、締め切りへの不安を減らせる。
+Các thành viên chia sẻ những kết quả nhỏ đã đạt được trong quá trình làm việc và ghi nhận thành quả của nhau. Ngay cả khi chưa biết rõ tiến độ tổng thể, mọi người vẫn có thể cảm nhận rằng nhóm đang từng bước tiến lên, từ đó giảm bớt lo lắng về deadline.
+B17: "Áp dụng ""Cột mốc tích hợp vùng đệm"" (Buffer-integrated Milestone): Đặt thời hạn trước 2 ngày so với deadline cuối cùng làm ""ngày xác định triển vọng"" chung của nhóm, tạo cơ chế làm rõ tiến độ chậm hoặc điểm lo ngại từ sớm. Nhờ đó, dù có sự chậm trễ bất ngờ, nhóm vẫn có đủ thời gian để hỗ trợ lẫn nhau và giảm bớt áp lực cá nhân.
+
+「バッファ付きマイルストーン（Buffer-integrated Milestone）」の導入: 各個人の最終締切の2日前をチーム共有の「見通し確認日」と設定し、進捗の遅れや懸念点を早期に可視化する仕組みを作ります。これにより、予期せぬ遅れが発生しても全体でカバーする余裕が生まれ、個人の焦りを軽減できます。"
+B18: 他のメンバーの進捗がわからない場合でも、予定どおりに進む場合と遅れる場合の二つの行動プランを事前に用意する。それぞれの状況で自分ができることを明確にし、進捗が不明な間も取り組める作業を決めておく。これにより、他の人の進捗に左右されず、締め切りへの不安を減らし、安心して自分の作業に集中できるようにする。
+Ngay cả khi chưa biết rõ tiến độ của các thành viên khác, nhóm chuẩn bị trước hai phương án hành động: khi công việc diễn ra đúng kế hoạch và khi công việc bị chậm trễ. Trong mỗi tình huống, các thành viên xác định rõ những việc bản thân có thể thực hiện, đồng thời chuẩn bị những công việc có thể chủ động làm ngay cả khi chưa có thông tin tiến độ. Nhờ đó, mỗi người giảm bớt sự phụ thuộc vào tiến độ của người khác, hạn chế lo lắng về deadline và yên tâm tập trung vào công việc của mình.
+B19: Cung cấp lịch trình dự kiến cho toàn bộ dự án, thể hiện những mốc có thể ảnh hưởng trực tiếp đến công việc của từng người.
+プロジェクト全体の予定スケジュールを提示し、各メンバーの作業に直接影響する可能性のあるマイルストーンを明示する。
+B20: Chỉ thông báo khi một thay đổi về tiến độ có khả năng ảnh hưởng đến công việc hoặc thời hạn của thành viên khác.
+進捗の変更が他のメンバーの作業や期限に影響する可能性がある場合にのみ通知する。
+B28: 課題 (challenge)②
+B29: 解決策（全員分）
+Tất cả Solution | D29: → | E29: 解決策 (solution) | F29: → | G29: 解決策を実現する最低限の機能
+Các tính năng tối thiểu để thực hiện giải pháp
+B30: 誰かが作業を終えられないとき、残った作業を小さく分け、他のメンバーが自分のできる範囲で手伝う内容を選べるようにする。特定の人だけに負担を押し付けず、納得して協力できるようにする。
+Khi một thành viên không thể hoàn thành công việc, nhóm chia phần việc còn lại thành những nhiệm vụ nhỏ để các thành viên khác có thể tự lựa chọn phần hỗ trợ phù hợp với khả năng và thời gian của mình. Nhờ đó, gánh nặng không bị đẩy lên một số người nhất định và mọi người có thể hợp tác trên tinh thần tự nguyện, đồng thuận. | E30: Biến việc hỗ trợ khi nhóm gặp khó khăn từ một trách nhiệm bị đẩy sang một số cá nhân thành sự hợp tác dựa trên lựa chọn tự nguyện và sự công nhận lẫn nhau. Khi mỗi người có quyền quyết định mức độ hỗ trợ, đồng thời những đóng góp phát sinh được ghi nhận và cân bằng một cách minh bạch, các thành viên có thể cảm thấy thời gian và nỗ lực của mình được tôn trọng thay vì bị lợi dụng. | G30: Đăng công việc cần hỗ trợ: Khi có phần việc chưa hoàn thành, thành viên hoặc TL đăng một yêu cầu hỗ trợ, nêu rõ công việc cần làm, thời hạn và công sức dự kiến.
+B31: メンバーがチームのために行った努力や手伝いを「ありがとうカード」に書いて伝え合う。完成した成果だけでなく、一人ひとりの時間や努力も認められていると感じられるようにする。
+Các thành viên viết những lời cảm ơn vào "thẻ cảm ơn" (ありがとうカード) để ghi nhận sự cố gắng và giúp đỡ mà mỗi người đã dành cho nhóm. Qua đó, mọi người cảm thấy không chỉ kết quả công việc mà cả thời gian và nỗ lực của từng cá nhân đều được công nhận và trân trọng. | G31: Tự nguyện nhận hỗ trợ: Các thành viên xem danh sách công việc cần hỗ trợ và chủ động lựa chọn phần mình có thể làm, không bị tự động giao thêm việc.
+B32: 誰かの作業を他のメンバーが手伝う必要があるとき、無理な場合は理由を詳しく説明せずに断れるようにする。また、断った人を責めないことをチームのルールにする。自分の時間や事情が尊重されていると感じられるようにする。
+Khi cần thành viên khác hỗ trợ phần việc chưa hoàn thành, mỗi người có quyền từ chối nếu không thể giúp đỡ mà không cần giải thích chi tiết lý do. Đồng thời, nhóm thống nhất không trách móc người từ chối, giúp mọi thành viên cảm thấy thời gian và hoàn cảnh cá nhân của mình được tôn trọng. | G32: Ghi nhận đóng góp và thỏa thuận bù đắp: Sau khi hỗ trợ, thành viên gửi kết quả. Nhóm xác nhận công việc đã hoàn thành và ghi lại cách bù đắp được hai bên thống nhất.
+B33: Đánh giá và ghi nhận đóng góp của các thành viên
+B34: nhóm phân chia lại phần việc dựa trên khối lượng công việc hiện tại, năng lực và thời gian rảnh của từng người.
+B35: Xây dựng kế hoạch làm việc với những công việc thiết yếu được hoàn thành trước, thêm các công việc không thực sự cần thiết ở cuối cùng để khi có thành viên không phản hồi hay không phụ trách công việc của mình thì có thể bớt các công việc không cần thiết lại và thay bằng các công việc của người đó (nếu người đó có liên lạc lại thì giao cho họ các công việc không cần thiết đã bị thay thế).
+Khối lượng công việc vẫn được giữ nguyên khi thay thế nên các thành viên không cảm thấy căng thẳng hay bị đối xử bất công khi phải đảm nhận phần việc của người khác.
+
+まず必須のタスクを優先して終わらせ、緊急性の低い（必ずしも必要ではない）タスクを計画の後ろに配置します。連絡が取れない、または担当作業を行わないメンバーが出た場合、後ろにある不要不急のタスクを削り、その代わりにそのメンバーの必須タスクを引き受けます（もしそのメンバーと後から連絡が取れた場合は、置き換えられた不要不急のタスクを割り当てます）。全体の作業量は変わらないため、他の人のタスクを引き受けてもストレスや不公平感を感じずに済みます。
+B36: Đưa ra cơ chế đấu giá và giao bán công việc. Giao bán khi mỗi công việc của người không phụ trách được gán một mức phần trăm điểm số khuyến khích cộng thêm cho người đảm nhận thay. Đấu giá khi một thành viên khao khát một nhiệm vụ của một thành viên khác nhưng người đó không muốn đổi thì thành viên đó có thể nhận thêm công việc và nhận đặc quyền trao đổi hoặc người khác đó sẽ yêu cầu người muốn trao đổi phải nhận thêm công việc thì mới đồng ý trao đổi. 
+
+タスクの「売り出し」と「オークション」の仕組みを導入します。「売り出し」では、不在メンバーのタスクにボーナスポイント（追加評価）を付与して他の人に引き受けてもらいます。「オークション」では、あるメンバーが他のメンバーのタスクを強く希望しているものの相手が交換に応じない場合、希望者が追加のタスクを引き受けることで交換権を得るか、あるいは元の担当者が「追加タスクを引き受けること」を条件に交換に応じるというルールにします。
+B37: 誰かが作業を終えられず、他のメンバーが代わりに作業を引き受けた場合、その追加の努力や負担を公平に評価する。また、その貢献に応じて、次の作業分担で負担を調整する。これにより、特定の人だけが損をすることなく、一人ひとりの時間や努力が尊重されていると感じながら協力できるようにする。
+Khi một thành viên không hoàn thành công việc và người khác phải đảm nhận thay, nhóm đánh giá công bằng những nỗ lực và gánh nặng phát sinh đó. Đồng thời, dựa trên mức độ đóng góp, nhóm điều chỉnh việc phân chia công việc ở những giai đoạn tiếp theo. Nhờ vậy, không ai cảm thấy mình phải chịu thiệt một cách đơn phương và mọi thành viên đều cảm nhận được rằng thời gian, công sức của bản thân được tôn trọng.
+B38: Những nhiệm vụ phát sinh do thành viên khác không hoàn thành được ghi nhận riêng, thay vì gộp chung vào kết quả cuối cùng của người tiếp nhận.
+他のメンバーが完了できなかったことによって発生した追加タスクは、引き受けたメンバーの最終成果にまとめるのではなく、個別に記録する。
+B39: Ghi nhận nhiệm vụ đã thực hiện, thời gian bỏ ra, sản phẩm bàn giao và những công việc phát sinh mà mỗi thành viên đã đảm nhận.
+各メンバーが実施したタスク、費やした時間、納品物、および追加で引き受けた作業を記録する。
+B40: "メンバーが自分の希望や負担に応じて、納得したうえで作業を交換したり、追加の作業を引き受けたりできるようにする。また、追加で引き受けた作業には、その貢献に応じた評価を与える。これにより、負担を一方的に押し付けられることなく、一人ひとりの努力が尊重されていると感じながら協力できるようにする。
+Cho phép các thành viên tự nguyện trao đổi hoặc đảm nhận thêm công việc dựa trên mong muốn và khối lượng công việc của bản thân, với sự đồng thuận của các bên. Đồng thời, những đóng góp phát sinh được ghi nhận và đánh giá tương xứng. Nhờ đó, không ai cảm thấy bị ép gánh thêm trách nhiệm, và mọi người đều cảm nhận được công sức của mình được tôn trọng."

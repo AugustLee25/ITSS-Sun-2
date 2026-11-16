@@ -1,0 +1,15 @@
+# Profile dev: PostgreSQL của docker-compose.yml (docker compose up -d db)
+spring:
+  datasource:
+    url: ${HANARE_DB_URL:jdbc:postgresql://localhost:5432/hanare}
+    username: ${HANARE_DB_USER:hanare}
+    password: ${HANARE_DB_PASSWORD:hanare}
+
+hanare:
+  jwt:
+    # CHỈ dùng khi dev. Production phải đặt HANARE_JWT_SECRET.
+    secret: ${HANARE_JWT_SECRET:dev-only-hanare-jwt-secret-change-me-0123456789}
+
+logging:
+  level:
+    app.hanare: DEBUG

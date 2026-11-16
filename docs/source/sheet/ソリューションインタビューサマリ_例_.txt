@@ -1,0 +1,68 @@
+A1: 1. 回答分析
+B2: No | C2: 質問 | D2: 回答の分類 | E2: 回答の分析
+B3: 1.0 | C3: 学部と学年を教えてください。
+
+Bạn đang học ngành nào, khóa bao nhiêu?
+B4: 2.0 | C4: （アプリに触ってもらった後に）
+このアプリをどのように理解していますか？
+
+(Sau khi cho đối phương dùng thử ứng dụng)
+Bạn đang hiểu như thế nào về ứng dụng này?
+B5: 3.0 | C5: （提供する価値を相手が理解した状態で）
+このアプリが提供する価値は、あなたにとってどの程度魅力的ですか？
+また、なぜそのように思いましたか？
+
+(Khi mà đối phương đã hiểu được giá trị sản phẩm mang lại)
+Giá trị mà ứng dụng này mang lại đã hấp dẫn bạn ra sao? Và tại sao bạn lại nghĩ như vậy?
+B6: 4.0 | C6: 実際の日常生活や業務の中で、このアプリをどのような場面で使うと思いますか？
+
+Trong cuộc sống hay công việc hàng ngày, bạn nghĩ mình sẽ sử dụng ứng dụng này trong những tình huống nào?
+B7: 5.0 | C7: 提案されている機能の中で、最も重要だと思うものは何ですか？どうしてそう思いましたか？
+
+Trong số các tính năng chúng mình đã đề xuất thì theo bạn đâu là tính năng quan trọng nhất? Tại sao bạn lại nghĩ như vậy?
+B8: 6.0 | C8: この問題／課題を解決するために、どのような点を変更する必要があると思いますか？どうしてそう思いましたか？
+
+Để giải quyết vấn đề / thách thức này thì theo bạn ứng dụng cần phải thay đổi ở điểm nào? Tại sao bạn lại nghĩ như vậy?
+B9: 7.0 | C9: 他の類似アプリと比較して、このアプリの優れている点や劣っている点は何だと思いますか？
+
+So với những ứng dụng tương tự thì theo bạn đâu là điểm vượt trội / điểm còn thua kém hơn của ứng dụng này?
+A11: 2. 解決策と機能の定義
+C12: プロブレムインタビュー結果
+（ソリューションインタビュー実施前）
+B13: 問題 (problem) | C13: HUSTの食堂が、常に混雑のため待ち時間が長く、使いにくい状態となっている
+Căn tin của HUST luôn trong trạng thái đông đúc nên thời gian chờ đợi rất lâu, gây ra khó khăn khi sử dụng
+B14: 課題 (challenge)① | C14: 混雑を解消させる
+Giảm sự tắc nghẽn
+B15: 課題①の解決策 (solution) | C15: 混雑状況を可視化し、利用者が混雑していない時間帯を選べるようにする
+Hiển thị trực quan tình trạng đông đúc, giúp người dùng lựa chọn khung giờ ít đông hơn để sử dụng.
+B16: 課題①の解決策を実現するための
+機能 (function) | C16: 混雑状況が見えるグラフ表示機能
+Chức năng hiển thị biểu đồ thể hiện tình trạng đông đúc.
+C17: 事前登録制にして利用時間の予約をする機能
+Chức năng đặt trước thời gian sử dụng bằng hệ thống đăng ký trước.
+C18: 予約状況を確認するための一覧機能
+Chức năng hiển thị danh sách để kiểm tra tình trạng đặt chỗ
+B19: 課題 (challenge)② | C19: 待ち時間を感じずにリラックスして過ごせるようにする
+Giúp khách hàng thư giãn, không cảm thấy đang phải chờ đợi
+B20: 課題②の解決策 (solution) | C20: 入り口へ並ぶ列にいる間に、退屈にならないような仕組みを用意する
+Chuẩn bị cơ chế để tránh sự nhàm chán khi xếp hàng chờ vào cửa
+B21: 課題②の解決策を実現するための
+機能 (function) | C21: QRコードを置いて、待ち時間の分だけポイントが貯まる機能
+Chức năng tích điểm dựa trên thời gian chờ bằng cách quét mã QR
+C22: 退屈にならないように過ごせるためのミニゲーム機能
+Chức năng mini-game giúp người dùng giải trí trong lúc chờ
+C23: 退屈にならないように過ごせるための最新ベトナム音楽視聴機能
+Chức năng nghe nhạc Việt Nam mới nhất để giảm cảm giác nhàm chán khi chờ đợi
+C26: ソリューションインタビュー実施後 | D26: 修正した／しなかった根拠
+B27: インタビュー分析結果を踏まえて決定した課題(challenge) | C27: 待ち時間を感じずにリラックスして過ごせるようにする
+Giúp khách hàng thư giãn, không cảm thấy đang phải chờ đợi | D27: 質問No.4の回答から、
+ユーザーがよりリラックスができる場面を求めていること、また、友達と一緒に楽しめることに魅力を感じていることがわかったため、課題②を選択した
+Từ câu trả lời của câu hỏi số 4, vì nhóm nhận thấy người dùng đang tìm kiếm một môi trường có thể thư giãn và thấy rất hấp dẫn với việc có thể tận hưởng cùng bạn bè, nên nhóm chúng tôi chọn Thách thức ②
+B28: 解決策 (solution) | C28: 入り口へ並ぶ列にいる間に、退屈にならないような仕組みを用意する
+Chuẩn bị cơ chế để tránh sự nhàm chán khi xếp hàng chờ vào cửa | D28: 質問No.3,4の回答から、
+ユーザーが、機能を使うことでより退屈を感じないようになることがわかったので、修正をしない
+Từ câu trả lời của câu hỏi số 3, 4, vì nhóm nhận thấy rằng người dùng không cảm thấy nhàm chán khi sử dụng chức năng này nên nhóm quyết định không sửa
+B29: 機能 (function) | C29: QRコードを置いて、待ち時間の分だけポイントが貯まる機能
+Chức năng tích điểm dựa trên thời gian chờ bằng cách quét mã QR
+C30: 退屈にならないように過ごせるための友達と遊べるミニゲーム機能
+Chức năng chơi minigame cùng với bạn bè để trải qua mà không bị nhàm chán

@@ -1,0 +1,36 @@
+A1: 2回目のソリューションインタビューサマリCheckList
+B2: No | C2: 項目 | D2: 観点 | E2: 報告前
+B3: 1 | C3: 回答の分類
+Phân loại câu trả lời | D3: 全ての質問について具体的な回答数を分類別に記載していて、合計が全回答者数と一致しているか
+
+Số lượng người trả lời cho mỗi phân loại đã được ghi chưa? Tổng số lượng có khớp với tổng số người trả lời chưa? | E3: False
+B4: 2 | C4: 回答の分析
+Phân tích câu trả lời | D4: 全ての質問について回答の分類を踏まえて分析することができているか
+
+Kết quả phân tích đã dựa trên “phân loại câu trả lời” hay chưa? | E4: False
+B5: 3 | C5: 2回目のソリューションインタビュー実施前の機能
+Chức năng trước khi thực hiện phỏng vấn giải pháp lần 2 | D5: 1回目のソリューションインタビュー実施後の機能を変更なく記載しているか
+
+Đã ghi lại đúng các chức năng đã quyết định sau khi thực hiện buổi phỏng vấn giải pháp lần 1 chưa? | E5: False
+B6: 4 | C6: 2回目のソリューションインタビュー実施後の機能
+Chức năng sau khi thực hiện phỏng vấn giải pháp lần 2 | D6: 回答の分析を踏まえて「インタビュー実施前の機能」の修正方針を記載しているか
+修正がない場合は「変更なし」と記入しているか
+
+Đã ghi lại được phương châm chỉnh sửa của MVP dựa vào việc phân tích câu trả lời hay chưa?
+Trường hợp không sửa thì có điền là 変更なし hay chưa? | E6: False
+B7: 5 | C7: 修正した／しなかった根拠
+Căn cứ chỉnh sửa/ không chỉnh sửa | D7: 回答の分析を踏まえて修正の根拠を説明できているか
+
+Đã giải thích được lý do tại sao mình sửa/tại sao không sửa dựa vào việc phân tích câu trả lời hay chưa? | E7: False
+B8: 6 | C8: 言語
+Ngôn ngữ | D8: 全て日本語とベトナム語で記載されているか
+
+Tất cả được viết bằng tiếng Nhật và tiếng Việt chưa? | E8: False
+B9: 7 | C9: 体裁
+Hình thức trình bày | D9: フォントサイズ、色、罫線、セル結合等、見やすい状態になっているか
+
+Cỡ chữ, màu sắc, viền ô, gộp ô, ... sạch đẹp, dễ nhìn hay chưa? | E9: False
+B10: 8 | C10: チェック
+Kiểm tra | D10: No.1～7について2人以上のメンバーが確認し、✅を入れたか 
+
+Có ít nhất 2 thành viên đã kiểm tra và tích vào No.1~7 hay chưa? | E10: False

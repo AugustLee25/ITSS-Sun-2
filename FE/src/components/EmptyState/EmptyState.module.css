@@ -1,0 +1,42 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-4);
+  text-align: center;
+}
+
+.compact {
+  padding: var(--space-6) var(--space-4);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+.compact .icon {
+  width: 40px;
+  height: 40px;
+}
+
+.title {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-bold);
+}
+
+.description {
+  max-width: 44ch;
+  color: var(--color-text-muted);
+}
+
+.action {
+  margin-top: var(--space-2);
+}

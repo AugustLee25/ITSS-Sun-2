@@ -1,0 +1,33 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--font-size-h3);
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

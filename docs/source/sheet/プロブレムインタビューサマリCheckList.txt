@@ -1,0 +1,35 @@
+A1: プロブレムインタビューサマリCheckList
+B2: No | C2: 項目 | D2: 観点 | E2: 提出前 | F2: FB修正後
+B3: 1 | C3: 回答の分類 | D3: 全ての質問について具体的な回答数を分類別に記載していて、合計が全回答者数と一致しているか
+
+Số lượng người trả lời cho mỗi phân loại đã được ghi chưa? Tổng số lượng có khớp với tổng số người trả lời chưa? | E3: False | F3: False
+B4: 2 | C4: 回答の分析 | D4: 全ての質問について回答の分類を踏まえて分析することができているか
+
+Kết quả phân tích đã dựa trên “phân loại câu trả lời” hay chưa? | E4: False | F4: False
+B5: 3 | C5: インタビュー実施前の問題 | D5: 第4回授業で決定した問題を変更なく記載しているか
+
+Vấn đề đã chọn ở buổi 4 đã được ghi y hệt hay chưa? | E5: False | F5: False
+B6: 4 | C6: インタビュー実施後の問題 | D6: 回答の分析を踏まえてインタビュー実施前の問題を修正できているか
+修正がない場合は「変更なし」と記入しているか
+
+Đã sửa lại "Vấn đề" dựa vào việc phân tích câu trả lời hay chưa?
+Trường hợp không sửa thì có điền là 変更なし hay chưa?
+(Chú thích: 変更なし là "không thay đổi") | E6: False | F6: False
+B7: 5 | C7: 修正の根拠 | D7: 回答の分析を踏まえて修正した／修正しない根拠を説明できているか
+
+Đã giải thích được lý do tại sao mình sửa/tại sao không sửa dựa vào việc phân tích câu trả lời hay chưa? | E7: False | F7: False
+B8: 6 | C8: 感情 | D8: 回答の分析を踏まえて感情を判断できているか
+
+Đã phán đoán được cảm xúc của người dùng dựa vào việc phân tích câu trả lời hay chưa? | E8: False | F8: False
+B9: 7 | C9: 課題 | D9: インタビュー実施後の問題、もしくは感情との関係性は妥当か
+
+Mối quan hệ giữa "Vấn đề thu được sau phỏng vấn" (hoặc "Cảm xúc") với "Thách thức" đã hợp lý hay chưa? | E9: False | F9: False
+B10: 8 | C10: 言語 | D10: 全て日本語とベトナム語で記載されているか
+
+Tất cả được viết bằng tiếng Nhật và tiếng Việt chưa? | E10: False | F10: False
+B11: 9 | C11: 体裁 | D11: フォントサイズ、色、罫線、セル結合等、見やすい状態になっているか
+
+Cỡ chữ, màu sắc, viền ô, gộp ô, ... sạch đẹp, dễ nhìn hay chưa? | E11: False | F11: False
+B12: 10 | C12: チェック | D12: No.1～9について2人以上のメンバーが確認し、✅を入れたか 
+
+Có ít nhất 2 thành viên đã kiểm tra và tích vào No.1~9 hay chưa? | E12: False | F12: False

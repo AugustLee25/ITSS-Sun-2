@@ -1,0 +1,21 @@
+A1: 1. 回答分析
+    Phân tích câu trả lời
+B2: No | C2: 質問
+Câu hỏi | D2: 回答の分類
+Phân loại câu trả lời | E2: 回答の分析
+Phân tích câu trả lời
+B3: 1.0
+B4: 2.0
+B5: 3.0
+B6: 4.0
+B7: 5.0
+B8: 6.0
+B9: 7.0
+A11: 2. MVP修正方針
+    Quyết định phương châm chỉnh sửa MVP
+C12: 2回目のソリューションインタビュー実施前の機能
+Chức năng trước khi thực hiện phỏng vấn giải pháp lần 2 | D12: 2回目のソリューションインタビュー実施後の機能
+Chức năng sau khi thực hiện phỏng vấn giải pháp lần 2 | E12: 修正した／しなかった根拠
+Căn cứ chỉnh sửa/ không chỉnh sửa
+B13: 機能 (function)
+Các chức năng

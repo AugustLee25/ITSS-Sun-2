@@ -1,0 +1,11 @@
+# Profile demo: nạp nhóm mẫu + đồng hồ điều khiển được (GET/POST /api/v1/demo/*). Kết hợp với `dev` (PostgreSQL docker)
+# hoặc chạy bằng DemoRunner (PostgreSQL nhúng, không cần Docker): xem run-demo.cmd.
+hanare:
+  jwt:
+    # CHỈ demo. Token sống 30 ngày để việc tua đồng hồ không làm người xem bị đăng xuất.
+    secret: ${HANARE_JWT_SECRET:demo-only-hanare-jwt-secret-change-me-0123456789}
+    ttl: P30D
+
+logging:
+  level:
+    app.hanare: INFO

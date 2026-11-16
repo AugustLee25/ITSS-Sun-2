@@ -1,0 +1,56 @@
+A1: 1. 回答分析 / 1. Phân tích câu trả lời
+B2: No | C2: 質問 / Câu hỏi | D2: 回答の分類 / Phân loại câu trả lời | E2: 回答の分析 / Phân tích câu trả lời
+B3: 1 | C3: 学部と学年を教えてください。
+Bạn đang học ngành nào, khóa bao nhiêu? | D3: 日越ITコースは13人、自動車技術は2人、建設材料は1人です。
+CNTT Việt–Nhật: 13/16; Công nghệ kỹ thuật ô tô: 2/16; Vật liệu xây dựng: 1/16.
+B4: 2 | C4: （問題を丁寧に説明した後に）
+この問題はどのくらい頻繁に起こりますか？
+(Sau khi trình bày kỹ càng về vấn đề)
+Tần suất mà bạn gặp phải vấn đề này? | D4: 困難が発生したグループ数と参加グループ数の両方が明確なのは8人です。0/3と答えた人は1人で、発生率を計算できない人は7人です。
+Có tỷ lệ nhóm gặp khó khăn x/y rõ ràng: 8/16; không gặp ở 0/3 nhóm: 1/16; thiếu số liệu để tính tỷ lệ: 7/16. | E4: 一部の学生は、参加したほとんどのグループで問題を経験しています。一方、問題を経験していない学生もいます。ただし、問題の捉え方が人によって異なるため、全体の発生率を正確に計算することは難しいです。
+Một số sinh viên gặp khó khăn ở hầu hết các nhóm đã tham gia, trong khi có người không gặp vấn đề. Tuy nhiên, cách hiểu về khó khăn giữa các người trả lời chưa hoàn toàn đồng nhất nên khó tính chính xác một tỷ lệ chung.
+B5: 3 | C5: 最近、その問題に直面した際の具体的な状況を教えていただけますか？
+Hãy kể về một tình huống mà gần đây bạn gặp phải về vấn đề đó? | D5: 担当者の未実施・連絡不能は6人、進捗確認の不足は4人、作業の依存関係や意見の対立は2人、遅れに対応できた人は2人、大きな進捗問題がなかった人は2人です。
+Không thực hiện nhiệm vụ hoặc mất liên lạc: 6/16; thiếu đối chiếu tiến độ: 4/16; phụ thuộc công việc hoặc bất đồng: 2/16; tiến độ thay đổi nhưng xử lý được: 2/16; không có sự cố tiến độ nghiêm trọng: 2/16. | E5: メンバーの代わりに作業したり、発表内容を削除して評価が下がったり、後続の作業が遅れたりするケースがありました。一方、メンバー同士の協力や適切な管理方法によって、問題に対応できたグループもありました。
+Có trường hợp phải làm thay phần việc còn thiếu, phải bỏ nội dung khiến điểm nhóm giảm hoặc làm chậm công đoạn tiếp theo. Ngược lại, một số nhóm vẫn xử lý được vấn đề nhờ sự phối hợp và phương pháp quản lý phù hợp.
+B6: 4 | C6: その時、どのように感じましたか？また、なぜそう感じたと思いますか？
+Lúc đó bạn cảm thấy như thế nào? Và bạn nghĩ tại sao mình lại cảm thấy như vậy? | D6: 怒り・失望・不公平感などは7人、ストレス・疲れ・不安は4人、不便・不満は2人、安心感・楽しさなどは3人です。
+Bực mình, thất vọng, bất bình: 7/16; căng thẳng, mệt mỏi, lo lắng: 4/16; bất tiện hoặc chưa hài lòng: 2/16; ít lo lắng, vui hoặc yên tâm: 3/16. | E6: 他人の仕事を代わりに行うことへの不満や、作業の遅れによる不安、進捗確認の会議への不便さが見られました。一方、現在の管理方法に安心している学生もいました。
+Một số sinh viên cảm thấy bất bình khi phải làm thay người khác, lo lắng vì công việc chậm tiến độ hoặc bất tiện khi phải họp để kiểm tra tiến độ. Tuy nhiên, cũng có người cảm thấy yên tâm với cách quản lý hiện tại.
+B7: 5 | C7: 現在どのような方法でこの問題に対応していますか？
+Hiện tại bạn đang có giải pháp nào đối với vấn đề này? | D7: チャットとSheets・Docsの併用は8人、チャットと会議・催促の併用は3人、その他は5人です（役割分担・期限・点数評価2人、GitHub1人、スプリント1人、Markdownとチェックリスト1人）。
+Nhắn tin kết hợp Sheets/Docs: 8/16; nhắn tin kết hợp họp hoặc nhắc nhở: 3/16; phương pháp khác: 5/16 (phân công/deadline/chia điểm 2, GitHub 1, sprint 1, Markdown và checklist 1). | E7: 学生はチャットやGoogle Sheetsだけでなく、GitHub、スプリント会議、チェックリストなど、さまざまな方法で仕事を管理しています。そのため、問題は単にタスク管理ツールがないことではないと考えられます。
+Sinh viên đã sử dụng nhiều phương pháp quản lý công việc như nhắn tin, Google Sheets, GitHub, họp sprint và checklist. Vì vậy, vấn đề không đơn thuần nằm ở việc thiếu công cụ quản lý nhiệm vụ.
+B8: 6 | C8: （現在の解決方法がある場合）
+現在の対応方法についてどう思いましたか？
+(Trong trường hợp mà có giải pháp hiện tại)
+Bạn nghĩ thế nào về giải pháp hiện tại? | D8: 情報の見落としや更新・確認の遅れは6人、協力を確保できない問題は5人、連携や品質の問題は2人、おおむね有効ですが課題もある人は3人です。
+Thông tin bị trôi, cập nhật hoặc kiểm tra chưa kịp: 6/16; công cụ không bảo đảm sự hợp tác: 5/16; vấn đề về phối hợp hoặc chất lượng: 2/16; nhìn chung hiệu quả nhưng có giới hạn: 3/16. | E8: MessengerやGoogle Sheetsは便利ですが、自主的な更新に頼っているため、情報が不足する場合があります。また、協力しないメンバーには催促しても効果がないことがあります。一方、作業の証拠を管理する方法は効果的ですが、手間がかかります。
+Messenger và Google Sheets tiện lợi nhưng phụ thuộc vào việc các thành viên chủ động cập nhật. Việc nhắc nhở đôi khi không hiệu quả với người thiếu hợp tác. Trong khi đó, phương pháp quản lý bằng minh chứng giúp theo dõi tốt hơn nhưng tốn công duy trì.
+A10: 2. 問題の定義 / 2. Định nghĩa vấn đề
+C11: プロブレムインタビュー実施前 / 
+Trước khi phỏng vấn vấn đề | D11: プロブレムインタビュー実施後 / 
+Sau khi phỏng vấn vấn đề | E11: 修正の根拠 / Căn cứ sửa đổi
+B12: 問題 (problem) / Vấn đề | C12: グループプロジェクトでは、各メンバーの進捗は本人の頭の中にあるか、グループチャットに散らばっています。そのため、リーダーが確認した時や提出期限が迫った時になって初めて、終わっていない人が分かります。その時には仕事を分担し直す時間がなく、一部のメンバーが短時間で残りの作業を代わりに行うことになります。
+Trong đồ án nhóm, tiến độ của từng người chỉ nằm trong đầu họ hoặc rải rác trong tin nhắn nhóm, nên các thành viên chỉ biết ai chưa làm xong khi nhóm trưởng hỏi hoặc khi đã sát hạn nộp. Lúc đó không còn thời gian chia lại việc, nên vài người phải làm bù phần còn thiếu trong thời gian ngắn. | D12: 大学のグループ課題では、役割や締切を決めていても、実際の進捗確認がメンバーの自主報告や会議に依存している場合があります。作業の遅れや未完了、連絡が取れない状況が発生すると、必要な情報が不足したり、対応の判断が遅れたりすることがあります。その結果、締切直前に作業が集中し、一部のメンバーが他の人の仕事を引き受けたり、課題の内容を削減したりすることで、負担や不公平感が生じています。
+Trong một số nhóm làm bài tập lớn, dù đã phân chia nhiệm vụ và deadline, việc xác nhận tiến độ thực tế vẫn phụ thuộc nhiều vào báo cáo tự giác hoặc các buổi họp. Khi thành viên chậm tiến độ, không hoàn thành nhiệm vụ hoặc không phản hồi, nhóm có thể thiếu thông tin hoặc chậm đưa ra phương án xử lý. Điều này khiến công việc bị dồn vào giai đoạn cuối, một số thành viên phải làm thay phần việc của người khác hoặc nhóm phải cắt giảm nội dung, gây áp lực và cảm giác bất công. | E12: 16人中11人に進捗把握の問題、7人に仕事の未実施や報告不足の問題が確認されました。進捗の遅れを発見するのが遅く、他のメンバーが代わりに作業したり、発表内容を減らしたりするケースがありました。一方、効果的な管理方法を使っているグループや、問題に対応できたグループもありました。そのため、最初の問題にある断定的な表現を修正しました。
+
+16 người phỏng vấn có 11 người phản ánh khó khăn trong việc nắm bắt tiến độ và 7 người gặp vấn đề liên quan đến việc không thực hiện hoặc không báo cáo nhiệm vụ. Một số trường hợp phát hiện tiến độ chậm quá muộn, dẫn đến phải làm thay hoặc cắt giảm nội dung công việc. Tuy nhiên, cũng có những nhóm quản lý hiệu quả hoặc vẫn xử lý được vấn đề. Vì vậy, nhóm đã điều chỉnh các khẳng định mang tính tuyệt đối trong Problem ban đầu.
+A14: 3. 課題の定義 / 3. Định nghĩa thách thức
+B15: 問題 (problem) / Vấn đề | C15: 大学のグループ課題では、役割や締切を決めていても、実際の進捗確認がメンバーの自主報告や会議に依存している場合があります。作業の遅れや未完了、連絡が取れない状況が発生すると、必要な情報が不足したり、対応の判断が遅れたりすることがあります。その結果、締切直前に作業が集中し、一部のメンバーが他の人の仕事を引き受けたり、課題の内容を削減したりすることで、負担や不公平感が生じています。
+Trong một số nhóm làm bài tập lớn, dù đã phân chia nhiệm vụ và deadline, việc xác nhận tiến độ thực tế vẫn phụ thuộc nhiều vào báo cáo tự giác hoặc các buổi họp. Khi thành viên chậm tiến độ, không hoàn thành nhiệm vụ hoặc không phản hồi, nhóm có thể thiếu thông tin hoặc chậm đưa ra phương án xử lý. Điều này khiến công việc bị dồn vào giai đoạn cuối, một số thành viên phải làm thay phần việc của người khác hoặc nhóm phải cắt giảm nội dung, gây áp lực và cảm giác bất công.
+B16: 感情 / Cảm xúc | C16: 進捗を把握できないことで、不安やストレス、不便を感じる学生がいました。また、他のメンバーの仕事を代わりに行うことで、怒りや失望、不公平感を感じる人もいました。一方、現在の管理方法に安心している学生もいました。
+Một số sinh viên cảm thấy lo lắng, căng thẳng hoặc bất tiện vì không nắm được tiến độ công việc. Ngoài ra, việc phải làm thay người khác khiến một số người bực mình, thất vọng hoặc cảm thấy bất công. Ngược lại, cũng có sinh viên cảm thấy yên tâm với phương pháp quản lý hiện tại.
+B17: 課題 (challenge)① / Thách thức ① | C17: 他のメンバーの進捗がはっきりしないときでも、締め切りへの不安に振り回されず、今後の見通しを持って安心して自分の作業に取り組めるようにすること。
+Ngay cả khi chưa nắm rõ tiến độ của các thành viên khác, mỗi người không bị nỗi lo deadline chi phối, có được sự hình dung về tình hình sắp tới và yên tâm thực hiện công việc của mình.
+B18: 課題 (challenge)② / Thách thức ② | C18: 担当者が作業を終えない、または連絡が取れないときでも、一部のメンバーだけが負担を背負わされているという不公平感を抱かず、一人ひとりの時間や努力が尊重されていると感じながら協力できるようにすること。
+Ngay cả khi người phụ trách không hoàn thành công việc hoặc không thể liên lạc, giúp các thành viên không cảm thấy bất công vì gánh nặng bị đẩy lên một số người, đồng thời có thể tiếp tục hợp tác với cảm nhận rằng thời gian và nỗ lực của từng người đều được tôn trọng.
+P24: “Yên tâm rằng công việc đang được thực hiện” có thể chỉ là cảm giác; công việc vẫn có thể đang làm nhưng không kịp hoặc không đáp ứng yêu cầu
+-> sửa thành Làm thế nào để các thành viên biết các thành viên khác có cần hỗ trợ hoặc điều chỉnh kế hoạch không
+
+Việc "thống nhất cách ứng phó và chia sẻ phần việc phát sinh" chỉ bắt đầu khi "không hoàn thành nhiệm vụ hoặc mất liên lạc" -> có thể quá muộn 
+-> sửa thành khi biết một thành viên khác cần hỗ trợ hoặc điều chỉnh kế hoạch
+P27: Bắt đầu từ lúc có nguy cơ -> ok
+"trách nhiệm và phần việc phát sinh được các thành viên liên quan chấp nhận" nếu hiểu rằng mọi người đều phải đồng ý trước khi xử lý thì có thể khiến nhóm khó ứng phó kịp thời
+
+"tiến triển thực tế" nghe rõ ràng hơn chỉ biết là "đang được thực hiện"

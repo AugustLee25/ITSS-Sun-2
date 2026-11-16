@@ -1,0 +1,126 @@
+.card {
+  position: relative;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  min-width: 0;
+}
+
+.interactive:hover {
+  border-color: var(--color-border-strong);
+}
+
+.interactive:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.stretched {
+  color: inherit;
+  text-decoration: none;
+  font-weight: var(--font-weight-bold);
+}
+
+.stretched:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.stretched::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* Link kéo giãn có focus: vòng focus vẽ ở thẻ (focus-within) nên bỏ vòng ở chính link */
+.stretched:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.accent_info {
+  border-left: 4px solid var(--color-primary);
+}
+.accent_success {
+  border-left: 4px solid var(--color-success);
+}
+.accent_warning {
+  border-left: 4px solid var(--color-warning);
+}
+.accent_danger {
+  border-left: 4px solid var(--color-error);
+}
+.accent_pending {
+  border-left: 4px solid var(--color-pending);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.headTitle {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-size: var(--font-size-base);
+  overflow-wrap: anywhere;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-muted);
+}
+
+.metaItem {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.metaItem dt::after {
+  content: ':';
+}
+
+.metaItem dd {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.points {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-success-text);
+  white-space: nowrap;
+}
+
+.cardActions {
+  margin-top: var(--space-3);
+}

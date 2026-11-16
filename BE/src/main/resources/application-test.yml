@@ -1,0 +1,16 @@
+# Profile test: datasource do test đặt (PostgreSQL nhúng, xem app.hanare.testsupport).
+spring:
+  main:
+    banner-mode: off
+  datasource:
+    hikari:
+      maximum-pool-size: 4
+
+hanare:
+  jwt:
+    secret: ${HANARE_JWT_SECRET:test-only-hanare-jwt-secret-0123456789abcdef}
+
+logging:
+  level:
+    root: WARN
+    app.hanare: INFO

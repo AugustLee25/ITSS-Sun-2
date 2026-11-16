@@ -1,0 +1,25 @@
+# PostgreSQL 16 cho chạy thật/dev:  docker compose up -d db
+# BE (profile dev) kết nối jdbc:postgresql://localhost:5432/hanare, user/password: hanare/hanare
+services:
+  db:
+    image: postgres:16
+    container_name: hanare-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hanare
+      POSTGRES_USER: hanare
+      POSTGRES_PASSWORD: hanare
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      - hanare-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hanare -d hanare"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  hanare-db-data:
