@@ -50,6 +50,7 @@ export function ExecutionActions({ task, onCarryover }: { task: TaskDetail; onCa
 
   const allowed = new Set(task.allowedActions)
   const buttons: Array<{ key: string; node: ReactNode }> = []
+  if (task.supportWorkId && task.helpRequestId) buttons.push({ key: 'helper', node: <ButtonLink key="helper" to={paths.helpWork(groupId, task.helpRequestId)}>{t('workflow.helper')}</ButtonLink> })
 
   if (allowed.has(TaskAction.START)) {
     buttons.push({

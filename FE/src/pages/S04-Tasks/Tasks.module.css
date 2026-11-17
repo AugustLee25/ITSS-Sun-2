@@ -205,3 +205,6 @@
     color: var(--color-text-muted);
   }
 }
+
+.delayWarning { background: var(--color-warning-soft); }
+.delayDanger { background: var(--color-error-soft); }

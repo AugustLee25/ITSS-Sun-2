@@ -75,6 +75,7 @@ public class OfferService {
 	public SupportOfferDto create(UUID helpRequestId, CurrentUser user, CreateOfferRequest req) {
 		Req r0 = views.req(helpRequestId);
 		access.requireMember(r0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, r0.projectId());
 		if (!Boolean.TRUE.equals(req.acknowledgedScope())) {
 			throw ApiException.validation("acknowledgedScope", "Cần xác nhận đã xem phạm vi, deadline và điểm.");
 		}
@@ -120,6 +121,7 @@ public class OfferService {
 	public SupportOfferDto withdraw(UUID offerId, CurrentUser user) {
 		Offer o0 = views.offer(offerId);
 		access.requireMember(o0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, o0.projectId());
 		if (!user.id().equals(o0.helperId())) {
 			throw ApiException.forbidden("Chỉ người gửi đề nghị mới rút được.");
 		}
@@ -140,6 +142,7 @@ public class OfferService {
 	public SupportOfferDto reconfirm(UUID offerId, CurrentUser user, ReconfirmOfferRequest req) {
 		Offer o0 = views.offer(offerId);
 		access.requireMember(o0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, o0.projectId());
 		if (!user.id().equals(o0.helperId())) {
 			throw ApiException.forbidden("Chỉ người gửi đề nghị mới xác nhận lại được.");
 		}
@@ -165,6 +168,7 @@ public class OfferService {
 	public AcceptOfferResponse accept(UUID helpRequestId, CurrentUser user, String idempotencyKey, AcceptOfferRequest req) {
 		Req r0 = views.req(helpRequestId);
 		GroupMembership lead = access.requireLeader(r0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, r0.projectId());
 		IdempotencyKey.require(idempotencyKey);
 		jdbc.sql("SELECT id FROM tasks WHERE id = :t FOR UPDATE").param("t", r0.taskId()).query(UUID.class).single();
 		Req r = views.reqForUpdate(helpRequestId);

@@ -57,11 +57,16 @@ public class TaskReader {
 	private final JdbcClient jdbc;
 	private final Clock clock;
 	private final Lookups lookups;
+	private final app.hanare.task.TaskReader workflowReader;
+	private final app.hanare.task.TaskViews workflowViews;
 
-	public TaskReader(JdbcClient jdbc, Clock clock, Lookups lookups) {
+	public TaskReader(JdbcClient jdbc, Clock clock, Lookups lookups, app.hanare.task.TaskReader workflowReader,
+			app.hanare.task.TaskViews workflowViews) {
 		this.jdbc = jdbc;
 		this.clock = clock;
 		this.lookups = lookups;
+		this.workflowReader = workflowReader;
+		this.workflowViews = workflowViews;
 	}
 
 	private static final String FACTS_SQL = """
@@ -152,30 +157,23 @@ public class TaskReader {
 
 	/** Có bản kế hoạch chưa APPROVED (đang soạn/chờ duyệt/bị trả) ở vòng này. */
 	public Optional<UUID> inFlightRevision(UUID roundId) {
-		return jdbc.sql("SELECT id FROM task_plan_revisions WHERE round_id = :r AND status <> 'APPROVED'")
+		return jdbc.sql("SELECT id FROM task_plan_revisions WHERE round_id = :r AND status IN ('DRAFT','PENDING_APPROVAL','CHANGES_REQUESTED')")
 				.param("r", roundId).query(UUID.class).optional();
 	}
 
 	public String pendingRevisionStatus(UUID roundId) {
-		return jdbc.sql("SELECT status FROM task_plan_revisions WHERE round_id = :r AND status <> 'APPROVED'")
+		return jdbc.sql("SELECT status FROM task_plan_revisions WHERE round_id = :r AND status IN ('DRAFT','PENDING_APPROVAL','CHANGES_REQUESTED')")
 				.param("r", roundId).query(String.class).optional().orElse(null);
 	}
 
 	/** Trạng thái thực hiện của task theo vòng mới nhất (TaskStatus). */
+	private app.hanare.task.TaskReader.Eval execution(TaskFacts f) {
+		var c = workflowReader.require(f.roundId());
+		return app.hanare.task.TaskReader.eval(c, c.deadline(), clock.instant(), f.cycleClosesAt(), false);
+	}
+
 	public String taskStatus(TaskFacts f, SubmissionFacts sub) {
-		if ("ACCEPTED".equals(f.roundState())) {
-			return "DONE";
-		}
-		if (sub != null) {
-			if (sub.decision() == null) {
-				return "SUBMITTED";
-			}
-			if (!"ACCEPTED".equals(sub.decision())) {
-				return sub.decision();
-			}
-			return "DONE";
-		}
-		return f.roundStartedAt() != null ? "IN_PROGRESS" : "TODO";
+		return execution(f).taskStatus();
 	}
 
 	/** Trạng thái điểm của task (PointTaskStatus) KHÔNG xét người xem (không có TRANSFERRED_OUT). */
@@ -192,7 +190,7 @@ public class TaskReader {
 			}
 			return "NEEDS_REVISION";
 		}
-		return f.roundStartedAt() != null ? "IN_PROGRESS" : "NOT_STARTED";
+		return "IN_PROGRESS".equals(execution(f).taskStatus()) ? "IN_PROGRESS" : "NOT_STARTED";
 	}
 
 	public static String pointStatusLabel(String status) {
@@ -209,33 +207,12 @@ public class TaskReader {
 
 	/** Trả [timeliness, isLate(true/false)] theo §4.1; deadline null -> NOT_DUE. */
 	public String[] timeliness(TaskFacts f, SubmissionFacts sub) {
-		Instant now = clock.instant();
-		if (sub == null) {
-			if (f.deadline() == null || !now.isAfter(f.deadline())) {
-				return new String[] { "NOT_DUE", "false" };
-			}
-			return new String[] { "OVERDUE_NO_RESULT", "true" };
-		}
-		boolean onTime = sub.planDeadline() == null || !sub.submittedAt().isAfter(sub.planDeadline());
-		if (sub.decision() == null) {
-			return new String[] { onTime ? "ON_TIME_PENDING_REVIEW" : "LATE_PENDING_REVIEW", String.valueOf(!onTime) };
-		}
-		if ("ACCEPTED".equals(sub.decision())) {
-			return new String[] { onTime ? "ON_TIME_ACCEPTED" : "LATE_ACCEPTED", String.valueOf(!onTime) };
-		}
-		return new String[] { "NEEDS_REWORK", "true" };
+		var e = execution(f);
+		return new String[] { e.timeliness(), String.valueOf(e.isLate()) };
 	}
 
 	public static String timelinessLabel(String timeliness) {
-		return switch (timeliness) {
-			case "NOT_DUE" -> "Chưa đến hạn";
-			case "OVERDUE_NO_RESULT" -> "Quá hạn — chưa có kết quả";
-			case "ON_TIME_PENDING_REVIEW" -> "Nộp đúng hạn — chờ TL duyệt";
-			case "ON_TIME_ACCEPTED" -> "Nộp đúng hạn — đã xác nhận";
-			case "LATE_PENDING_REVIEW" -> "Nộp trễ — chờ TL duyệt";
-			case "LATE_ACCEPTED" -> "Hoàn thành trễ — đã xác nhận";
-			default -> "Cần sửa hoặc cập nhật";
-		};
+		return app.hanare.task.TaskReader.timelinessLabel(timeliness);
 	}
 
 	/** Dựng TaskSummary (không kèm allowedActions). */
@@ -263,18 +240,8 @@ public class TaskReader {
 		CycleRef cycle = Lookups.cycleOf(f.cycleId(), f.cycleSeq(), f.cyclePeriodStart(), f.cycleClosesAt(),
 				jdbc.sql("SELECT timezone FROM projects WHERE id = :p").param("p", projectId).query(String.class).single());
 		UUID pendingId = inFlightRevision(f.roundId()).orElse(null);
-		String risk = jdbc.sql("""
-				SELECT COALESCE(MAX(CASE risk_type WHEN 'BLOCKED' THEN 2 WHEN 'DELAY_RISK' THEN 1 ELSE 0 END), 0)
-				  FROM risk_reports WHERE project_id = :p AND status <> 'RESOLVED' AND risk_type <> 'DROPOUT_RISK'
-				   AND (task_id = :t OR :t = ANY (affected_task_ids))
-				""").param("p", projectId).param("t", taskId).query(Integer.class).single() == 2 ? "BLOCKED" : null;
-		if (risk == null) {
-			int r = jdbc.sql("""
-					SELECT COUNT(*) FROM risk_reports WHERE project_id = :p AND status <> 'RESOLVED'
-					   AND risk_type = 'DELAY_RISK' AND (task_id = :t OR :t = ANY (affected_task_ids))
-					""").param("p", projectId).param("t", taskId).query(Integer.class).single();
-			risk = r > 0 ? "AT_RISK" : "NORMAL";
-		}
+		var ctx = workflowReader.require(f.roundId());
+		String risk = workflowViews.extras(List.of(ctx)).risk().getOrDefault(f.roundId(), "NORMAL");
 		boolean openHelp = jdbc.sql("SELECT EXISTS (SELECT 1 FROM help_requests WHERE task_id = :t AND status IN ('OPEN','MATCHED','IN_PROGRESS','SUBMITTED'))")
 				.param("t", taskId).query(Boolean.class).single();
 		TaskPointsBrief brief = null;
@@ -287,7 +254,7 @@ public class TaskReader {
 				f.hasEffectivePlan() ? "APPROVED" : jdbc.sql("SELECT COALESCE((SELECT status FROM task_plan_revisions WHERE round_id = :r ORDER BY revision_no DESC LIMIT 1), 'DRAFT')")
 						.param("r", f.roundId()).query(String.class).single(),
 				pendingRevisionStatus(f.roundId()), pendingId, taskStatus(f, sub), risk, tl[0], timelinessLabel(tl[0]),
-				Boolean.parseBoolean(tl[1]), "CARRYOVER_REQUIRED".equals(f.roundState()), null,
+				Boolean.parseBoolean(tl[1]), execution(f).needsCarryover(), execution(f).carryoverReason(),
 				sub == null ? null : sub.submittedAt(), brief, openHelp, f.taskVersion(), List.of());
 	}
 }

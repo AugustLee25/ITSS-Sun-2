@@ -140,7 +140,7 @@ describe('S03 — Tổng quan nhóm (Member)', () => {
     expect(screen.getByRole('link', { name: 'Kỳ sau' })).toHaveAttribute('href', `/groups/${GROUP_ID}?cycleId=cyc-4`)
     const tasks = screen.getByRole('heading', { name: 'Công việc của tôi' }).closest('section') as HTMLElement
     expect(within(tasks).getByText('Thực hiện: Đã nộp — chờ TL duyệt')).toBeInTheDocument()
-    expect(within(tasks).getByText('Kế hoạch: Đã duyệt')).toBeInTheDocument()
+    expect(within(tasks).queryByText('Kế hoạch: Đã duyệt')).not.toBeInTheDocument()
     expect(within(tasks).getByText('Nộp đúng hạn — chờ TL duyệt')).toBeInTheDocument()
     expect(within(tasks).getByRole('link', { name: 'Báo khó khăn' })).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks/task-1/difficulty`)
   })

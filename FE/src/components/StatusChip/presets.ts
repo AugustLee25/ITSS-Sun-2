@@ -26,6 +26,7 @@ import type { StatusTone } from './tones'
  */
 export const STATUS_TONES = {
   plan: {
+    CANCELLED: 'muted',
     DRAFT: 'neutral',
     PENDING_APPROVAL: 'pending',
     CHANGES_REQUESTED: 'warning',

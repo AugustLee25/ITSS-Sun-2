@@ -4,6 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMembers } from '@/api/groups'
+import { useCycles } from '@/api/schedule'
+import { isoToZonedInput, zonedTimeToIso } from '@/lib/zonedTime'
 import { isApiError } from '@/api/errors'
 import { taskKeys, useReviewPreview, useReviewResult, useSetIndependentReviewer } from '@/api/tasks'
 import { ErrorCode, GroupRole, TaskReviewDecision, type TaskDetail, type TaskSubmission } from '@/api/types'
@@ -69,7 +71,18 @@ export function ReviewPanel({ task, target }: { task: TaskDetail; target: TaskSu
   const f = useFormatters()
   const toast = useToast()
   const queryClient = useQueryClient()
-  const { groupId } = useGroup()
+  const { groupId, isLeader, timeZone } = useGroup()
+  const cycles = useCycles(groupId)
+  const [withCarryover, setWithCarryover] = useState(false)
+  const [targetCycle, setTargetCycle] = useState('')
+  const proposed = task.carryoverProposal?.expectedCompletionAt
+  const proposedInput = isoToZonedInput(proposed, timeZone)
+  const [nextDate, setNextDate] = useState(proposedInput.date)
+  const [nextTime, setNextTime] = useState(proposedInput.time || '17:00')
+  const [carryReason, setCarryReason] = useState('')
+  const candidates = (cycles.data?.items ?? []).filter((cycle) => cycle.sequenceNo > task.cycle.sequenceNo && ['OPEN','SCHEDULED'].includes(cycle.status)).sort((a,b) => a.sequenceNo-b.sequenceNo)
+  const suggestedCycle = candidates.find((cycle) => proposed && Date.parse(proposed) > Date.parse(cycle.periodStartAt) && Date.parse(proposed) <= Date.parse(cycle.closesAt)) ?? candidates[0]
+  const selectedCycle = targetCycle || suggestedCycle?.id
   const preview = useReviewPreview(target.id)
   const review = useReviewResult(groupId, task.id)
   const data = preview.data
@@ -93,9 +106,15 @@ export function ReviewPanel({ task, target }: { task: TaskDetail; target: TaskSu
 
   const onSubmit = form.handleSubmit((values) => {
     if (review.isPending) return
+    const includeCarryover = withCarryover && values.decision !== TaskReviewDecision.ACCEPTED
+    const deadline = includeCarryover ? zonedTimeToIso(nextDate, nextTime, timeZone) : null
+    if (includeCarryover && (!deadline || !selectedCycle)) {
+      form.setError('issueDescription', { message: t('workflow.noNext') }); return
+    }
     review.mutate(
       {
         submissionId: target.id,
+        ...(includeCarryover && deadline && selectedCycle ? { carryover: { targetCycleId: selectedCycle, deadline, decisionReason: carryReason || null, ...(proposed ? { sourceReportItemId: task.carryoverProposal?.reportItemId } : {}) } } : {}),
         decision: values.decision,
         issueDescription: values.decision === TaskReviewDecision.ACCEPTED ? null : values.issueDescription.trim(),
       },
@@ -177,6 +196,16 @@ export function ReviewPanel({ task, target }: { task: TaskDetail; target: TaskSu
                   <Textarea rows={4} {...form.register('issueDescription')} />
                 </FormField>
               ) : null}
+              {isLeader && decision !== TaskReviewDecision.ACCEPTED ? <div className={styles.formStack}>
+                <label><input type="checkbox" checked={withCarryover} onChange={(event) => setWithCarryover(event.target.checked)} />{t('workflow.reviewAndCarry')}</label>
+                {withCarryover ? <>
+                  <label>{t('workflow.targetCycle')}<select value={selectedCycle || ''} onChange={(event) => setTargetCycle(event.target.value)}>
+                    {candidates.map((cycle) => <option key={cycle.id} value={cycle.id}>{cycle.label}</option>)}
+                  </select></label>
+                  <label>{t('workflow.deadline')}<input type="date" value={nextDate} onChange={(event) => setNextDate(event.target.value)} /><input type="time" aria-label={t('workflow.deadline')} value={nextTime} onChange={(event) => setNextTime(event.target.value)} /></label>
+                  <label>{t('taskDetail.carryover.decisionReason')}<Textarea value={carryReason} onChange={(event) => setCarryReason(event.target.value)} /></label>
+                </> : <p>{t('workflow.confirmRework')}</p>}
+              </div> : null}
               {review.isError ? (
                 stale ? (
                   <InlineError

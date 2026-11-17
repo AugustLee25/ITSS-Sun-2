@@ -1,6 +1,6 @@
 # HANARE — Hợp đồng API REST `/api/v1` (v1.0)
 
-Hợp đồng giữa **BE Spring Boot** và **FE React**. Nguồn nghiệp vụ: `HANARE_UXUI_Screen_Spec.md` v1.2 (spec thắng khi lệch). Kiểu TypeScript khớp 1-1: [`api-types.ts`](./api-types.ts) — **mỗi endpoint dưới đây có đúng một khóa `"METHOD /path"` trong `ApiEndpoints`**. Đổi hợp đồng = sửa cả hai file. Các điểm spec mơ hồ đã quyết được ghi ở `docs/SPEC_ISSUES.md` (tiền tố `[API]`).
+Hợp đồng giữa **BE Spring Boot** và **FE React**. Nguồn nghiệp vụ: `HANARE_UXUI_Screen_Spec.md` v1.2, cùng các thay đổi được chọn trong `RA_SOAT_NGHIEP_VU_CHECKPOINT.md` mục 9 và nhật ký `docs/SPEC_ISSUES.md` ngày 16/11/2026. Kiểu TypeScript khớp 1-1: [`api-types.ts`](./api-types.ts) — **mỗi endpoint dưới đây có đúng một khóa `"METHOD /path"` trong `ApiEndpoints`**. Đổi hợp đồng = sửa cả hai file. Các điểm spec mơ hồ đã quyết được ghi ở `docs/SPEC_ISSUES.md` (tiền tố `[API]`).
 
 > Mục lục: §1 Quy ước chung · §2 Enum chính tắc · §3 Thông báo · §4 Quy tắc do server tính · §5 Endpoint theo module (A Auth · B Group/Member/Invite · C Schedule & Cycle · D Dashboard · E Notification · F Task/Plan/Round · G Submission & Decision · H Checkpoint Report · I Support riêng & Risk · J Help công khai · K Points · L Demo) · §6 Ánh xạ màn hình → endpoint · §7 Sở hữu module BE-A/BE-B · §8 Nghiệm thu 12.10 → hợp đồng · §9 Bảng mã lỗi · §10 Phụ lục (route FE gợi ý, ví dụ dùng chung).
 
@@ -90,14 +90,14 @@ Mọi lỗi (4xx/5xx) trả **đúng một dạng**:
 
 ### 1.8 Đồng thời & phiên bản
 - Tài nguyên có thể bị sửa đồng thời mang **`version: number`** (task, plan revision, group, support request, help request, support work, risk report, báo cáo của tôi). Request ghi nhận `version` **trong body** (không dùng `ETag/If-Match`). Lệch → `409 VERSION_CONFLICT`; FE tải lại bản mới rồi cho người dùng thử lại.
-- Duyệt/chuyển kỳ/chọn Helper khóa dòng gốc (`SELECT … FOR UPDATE`) và kiểm tra lại trạng thái trong transaction (BR09, 12.9). Submit và job chốt dùng cùng khóa kỳ: **`submittedAt` do server cấp sau khi lấy khóa**; giao dịch chờ khóa mà quá `closesAt` thì bị từ chối `409 SUBMISSION_WINDOW_CLOSED`.
+- Duyệt/chuyển kỳ/chọn Helper khóa dòng gốc (`SELECT … FOR UPDATE`) và kiểm tra lại trạng thái trong transaction (BR09, 12.9). Mọi thao tác workflow lấy khóa project trước, rồi cycle và round; submit và job chốt dùng cùng thứ tự khóa: **`submittedAt` do server cấp sau khi lấy khóa**; giao dịch chờ khóa mà quá `closesAt` thì bị từ chối `409 SUBMISSION_WINDOW_CLOSED`.
 
 ### 1.9 Idempotency
-- Header `Idempotency-Key: <chuỗi 8–64 ký tự, nên là UUID>`.
-- **REQUIRED** (thiếu → `400 IDEMPOTENCY_KEY_REQUIRED`): các thao tác ghi nhạy cảm — duyệt kế hoạch, nộp kết quả, duyệt kết quả/ghi điểm, chuyển kỳ, gửi báo cáo checkpoint, đăng yêu cầu hỗ trợ, chọn Helper, Helper nộp kết quả, giải quyết bất đồng, khóa phương án điểm, đảo khoản điểm. Danh sách chính xác = hằng `IDEMPOTENCY_REQUIRED` trong `api-types.ts` (và dòng **Idempotency** của từng endpoint).
-- **RECOMMENDED**: tạo nhóm/task/risk/offer…; server tôn trọng khóa nếu có (hằng `IDEMPOTENCY_RECOMMENDED`).
-- Ngữ nghĩa: khóa được ghi theo `(userId, method, đường dẫn đã thay tham số)` trong **24 giờ**. Lặp lại **cùng khóa + cùng body** → trả **nguyên response đã lưu** (cùng mã HTTP) kèm header `Idempotent-Replayed: true`, không có tác dụng phụ lần hai. Cùng khóa nhưng body khác → `422 IDEMPOTENCY_KEY_REUSED`; request đầu còn đang chạy → `409 IDEMPOTENCY_IN_PROGRESS`.
-- **Idempotent tự nhiên** (kể cả khi không gửi khóa): lặp cùng quyết định trên bản đã quyết (duyệt cùng `decision`, chọn cùng offer, chuyển kỳ cùng tham số) trả **200 + kết quả hiện có**, không tạo bản ghi/điểm thứ hai (7.3, S11). Khác quyết định → `409` (`SUBMISSION_ALREADY_REVIEWED`, `INVALID_PLAN_STATE`, `CARRYOVER_ALREADY_DONE`, `HELP_ALREADY_MATCHED`…). Ràng buộc DB (unique) là chốt chặn cuối.
+- FE gửi UUID qua header `Idempotency-Key`; retry khi mất mạng/5xx giữ nguyên khóa và nội dung.
+- **REQUIRED** trên module help/points: đăng yêu cầu hỗ trợ, chọn Helper, Helper nộp, giải quyết bất đồng, khóa/đảo điểm. Thiếu → `400 IDEMPOTENCY_KEY_REQUIRED`. Danh sách máy đọc là `IDEMPOTENCY_REQUIRED`.
+- **RECOMMENDED** trên module task để tương thích client cũ: nộp kết quả, gửi report, gửi lô kế hoạch, review và carryover. Có khóa → lưu bền response trong cùng transaction theo (user, operation gồm resource ID, key); cùng khóa/cùng body phát lại JSON, khác body → `409 IDEMPOTENCY_KEY_REUSED`. Chưa áp TTL; khóa task tối đa 200 ký tự. Carryover mới trả 201, phát lại trả 200; nộp mới/phát lại giữ 201. Không cấp header `Idempotent-Replayed`.
+- Các endpoint khác trong `IDEMPOTENCY_RECOMMENDED` dùng khóa trạng thái/version và unique DB; chưa có kho phát lại chung cho toàn hệ thống. Không suy ra khả năng phát lại response của task cho mọi module.
+- Không có khóa: review cùng quyết định, chọn cùng offer, carryover cùng kỳ/hạn trả trạng thái hiện có và không cấp điểm/lập vòng lần hai. Sai version hoặc quyết định xung đột trả 409. Tạo revision/nộp kết quả cần gửi khóa ổn định nếu muốn retry an toàn.
 
 ### 1.10 Nhãn do server dựng & `allowedActions`
 - Trường có hậu tố `Label`, `reason`, `message`, `headline`, `statusLabel`, `notice` là **câu tiếng Việt đã dựng sẵn** (kèm số lượng, tên, lý do). FE hiển thị nguyên văn. Chip trạng thái vẫn do FE map từ **enum** qua `i18n` (nhưng nhãn server luôn khớp enum). Sau này thêm `ja` qua `Accept-Language` mà không đổi contract.
@@ -144,7 +144,7 @@ Khớp mục 6 và 12 của spec; `api-types.ts` có `const` + union cùng tên.
 ### 2.2 Kế hoạch, task, vòng xử lý (6.1, 12.4)
 | Enum | Giá trị | Ghi chú |
 |---|---|---|
-| `PlanStatus` | `DRAFT`, `PENDING_APPROVAL`, `CHANGES_REQUESTED`, `APPROVED` | Trạng thái **revision kế hoạch** |
+| `PlanStatus` | `DRAFT`, `PENDING_APPROVAL`, `CHANGES_REQUESTED`, `APPROVED`, `CANCELLED` | Trạng thái **revision kế hoạch** |
 | `PlanApprovalSource` | `MEMBER_PLAN`, `TL_CARRYOVER`, `TL_SUPPORT_HANDOFF` | `approval_source` |
 | `Difficulty` | `EASY`, `MEDIUM`, `HARD` | Dễ/Trung bình/Khó; trọng số 1/2/3 |
 | `TaskStatus` | `TODO`, `IN_PROGRESS`, `SUBMITTED`, `FIX_REQUIRED`, `UPDATE_REQUIRED`, `DONE` | **Trạng thái thực hiện** — server dựng từ vòng+lần nộp+quyết định |
@@ -153,7 +153,7 @@ Khớp mục 6 và 12 của spec; `api-types.ts` có `const` + union cùng tên.
 | `RoundReason` | `INITIAL`, `NOT_SUBMITTED`, `FIX_REQUIRED`, `UPDATE_REQUIRED` | Lý do mở vòng |
 | `TaskReviewDecision` | `ACCEPTED`, `FIX_REQUIRED`, `UPDATE_REQUIRED` | Quyết định TL trên một lần nộp |
 | `TaskTimeliness` | `NOT_DUE`, `ON_TIME_PENDING_REVIEW`, `ON_TIME_ACCEPTED`, `LATE_PENDING_REVIEW`, `LATE_ACCEPTED`, `OVERDUE_NO_RESULT`, `NEEDS_REWORK` | Đúng hạn/trễ **do server tính** (§4.1). `LATE_ACCEPTED` = `completed_late` |
-| `TaskAction` | `EDIT_PLAN`, `SUBMIT_PLAN`, `WITHDRAW_PLAN`, `REVIEW_PLAN`, `PROPOSE_CHANGE`, `START`, `UPDATE_PROGRESS`, `REPORT_CHECKPOINT`, `REPORT_DIFFICULTY`, `SUBMIT_RESULT`, `REVIEW_RESULT`, `SET_CARRYOVER`, `DESIGNATE_REVIEWER`, `VIEW_RESULT` | `allowedActions` của task |
+| `TaskAction` | `EDIT_PLAN`, `SUBMIT_PLAN`, `WITHDRAW_PLAN`, `REVIEW_PLAN`, `PROPOSE_CHANGE`, `CANCEL_PLAN_REVISION`, `START`, `UPDATE_PROGRESS`, `REPORT_CHECKPOINT`, `REPORT_DIFFICULTY`, `SUBMIT_RESULT`, `REVIEW_RESULT`, `SET_CARRYOVER`, `DESIGNATE_REVIEWER`, `VIEW_RESULT` | `allowedActions` của task |
 | `TaskListTab` | `ALL`, `MINE`, `PENDING_APPROVAL`, `NEEDS_EDIT`, `NEEDS_ATTENTION` | Tab S04 |
 | `TaskHistoryKind` | `TASK_CREATED`, `PLAN_SAVED`, `PLAN_SUBMITTED`, `PLAN_WITHDRAWN`, `PLAN_APPROVED`, `PLAN_CHANGES_REQUESTED`, `TASK_STARTED`, `PROGRESS_NOTE`, `RESULT_SUBMITTED`, `RESULT_ACCEPTED`, `RESULT_FIX_REQUIRED`, `RESULT_UPDATE_REQUIRED`, `CARRIED_OVER`, `SUPPORT_HANDOFF`, `POINTS_AWARDED`, `POINTS_REVERSED` | Dòng lịch sử task |
 | `EvidenceKind` | `URL` | MVP chỉ link |
@@ -306,6 +306,16 @@ Kỳ N: `periodStartAt = closesAt` của kỳ N−1 (kỳ đầu: 00:00 `startDa
 `allocated` = Σ P_t của task đang thuộc quyền nhận hiện tại; `confirmed` = tổng ròng ledger; `pending = allocated − confirmed`; `potential = allocated`. Chuyển task chưa ghi điểm: `potential` người gốc −P_t, Helper +P_t (khi **được chọn**; yêu cầu mở chưa có Helper chỉ hiện `pendingTransfer`). **Ledger chỉ ghi khi TL duyệt**; một khoản `AWARD` + settlement + contribution + trạng thái task/work/request commit nguyên tử; idempotent theo khóa.
 
 ---
+### 4.7 Quy tắc workflow checkpoint (16/11/2026)
+- Chấp nhận thao tác tới hết `closesAt`; job đóng băng, review và carryover chỉ từ `now > closesAt`. Review/carryover tự bảo đảm có snapshot trước quyết định, kể cả job chạy trễ. Ngày bắt đầu là dự kiến, chưa chặn làm sớm.
+- Sau nộp kết quả hoặc sau lần gửi report đầu của một vòng: khóa start/progress/hỗ trợ riêng/đổi kế hoạch/bàn giao ngoài luồng; trước cutoff vẫn cập nhật kết quả/ngày qua revision report. Hồ sơ hỗ trợ đã có vẫn xem/xử lý/đóng theo quyền.
+- Helper nộp qua S10 hoặc ngay tại S06; cả hai dùng chung writer task, tạo liên kết support submission/contribution. S05 dẫn về phần việc hỗ trợ và từ chối ghi submission rời.
+- Report revision giữ `planRevisionId`, `submission.id`, minh chứng của chính revision đó. `GET my-report?revisionNo=N` chỉ đọc; `submissionAtCutoff` là bản chốt riêng, không thay nội dung revision cũ. Nháp chưa gửi không thay bản chốt. Dữ liệu cũ thiếu plan ID không được backfill suy đoán; nếu không suy ra chắc chắn từ submission liên kết thì trả `planRevisionId=null, planReferenceKnown=false`.
+- Mẫu số báo cáo chỉ gồm thành viên có task bắt buộc trong kỳ. Không có task → không phải gửi báo cáo rỗng. Nghĩa vụ vẫn theo kỳ chứa deadline của vòng đã duyệt, chưa mở báo cáo mọi tuần.
+- `TaskSummary` thêm `roundState, isHistorical, draftPlanId, draftPlanVersion, missedCheckpointCount, currentlyOverdue`. Lọc kỳ trả vòng thuộc kỳ; không thay bằng vòng mới nhất của task. S03 lấy tối đa 5 task đã duyệt hiện tại/tồn đọng, ưu tiên việc trễ, không lấy nháp hoặc việc ở kỳ tương lai.
+- Màu **card task**: một cutoff lỡ → vàng, từ hai → đỏ pastel. Giữ số kỳ lỡ sau dời hạn, loại thời gian chờ reviewer và dừng tăng khi accepted; task DONE không còn “đang trễ”. Không đổi ngưỡng màu thành viên C02.
+- Kỳ có task/kế hoạch/báo cáo đã gắn được giữ nguyên khi đổi lịch; lưu lịch kiểm lại cam kết và duyệt kế hoạch kiểm lại kỳ/hạn nhóm/người thực hiện. Không âm thầm sửa deadline.
+
 ## 5. Endpoint theo module
 
 Mỗi endpoint: **Vai trò · Màn hình · Owner (BE-A/BE-B, §7) · Idempotency**, rồi Request/Response/Lỗi. Tiền tố `/api/v1` được lược ở tiêu đề. Kiểu (`TênKiểu`) có trong `api-types.ts`. Mọi endpoint (trừ `PUBLIC`) còn có thể trả `401 UNAUTHENTICATED/TOKEN_EXPIRED`, `404 NOT_A_GROUP_MEMBER` (tài nguyên/đường dẫn thuộc nhóm mà người gọi không (còn) là thành viên — trả 404 để không lộ sự tồn tại của nhóm; Member gọi việc của TL thì `403 LEAD_ONLY`), `500 INTERNAL_ERROR` — không lặp lại bên dưới.
@@ -657,7 +667,8 @@ Query `ListTasksQuery`:
 | Tham số | Kiểu | Ghi chú |
 |---|---|---|
 | `tab` | `TaskListTab` | `ALL` (mặc định); `MINE` = `currentExecutor` là tôi; `PENDING_APPROVAL` = có revision `PENDING_APPROVAL`; `NEEDS_EDIT` = có revision `DRAFT`/`CHANGES_REQUESTED`; `NEEDS_ATTENTION` = `isLate` ∨ `riskStatus ∈ {AT_RISK,BLOCKED}` ∨ `needsCarryover` ∨ `taskStatus ∈ {FIX_REQUIRED,UPDATE_REQUIRED}` |
-| `cycleId` | Uuid | "Tuần" = kỳ checkpoint (không phải tuần lịch) |
+| `cycleId` | Uuid | Kỳ checkpoint; lấy đúng vòng thuộc kỳ, gồm vòng lịch sử đã chuyển kỳ |
+| `completion` | string | `DONE` / `UNFINISHED` / `OVERDUE`; gom nhóm nghiệp vụ, không thay `taskStatus` |
 | `assigneeId` | Uuid | người thực hiện hiện tại |
 | `planStatus` | `PlanStatus` | khớp `planStatus` **hoặc** `pendingRevisionStatus` |
 | `taskStatus` | `TaskStatus` | |
@@ -669,25 +680,20 @@ Query `ListTasksQuery`:
 Sắp: `deadline` tăng dần (null cuối), rồi `createdAt`. Response `200` `Page<TaskSummary>`.
 
 #### `POST /groups/{groupId}/tasks`
-**Vai trò:** LEAD · **Màn hình:** S04 (`+ Giao task`) · **Owner:** BE-B · **Idempotency:** RECOMMENDED
-Tạo task + vòng 1 + revision #1 `DRAFT` (`approvalSource = MEMBER_PLAN`); phát `TASK_ASSIGNED`. Request `CreateTaskRequest`:
-| Trường | Kiểu | Bắt buộc | Ràng buộc |
-|---|---|---|---|
-| `title` | string | ✔ | 3–120 |
-| `assigneeId` | Uuid | ✔ | thành viên đang hoạt động (có thể là TL) |
-| `cycleId` | Uuid | ✔ | kỳ ("tuần") chưa đóng; cùng nhóm |
-| `description` | string | ✔ | phạm vi, 1–4000 |
-| `expectedOutput` | string | ✔ | 1–2000 |
-| `startAt` | IsoInstant | ✔ | ≤ `deadline` |
-| `deadline` | IsoInstant | ✔ | `periodStartAt < deadline <= closesAt` của kỳ; ≤ cuối ngày `Group.deadline` |
-| `difficulty` | `Difficulty` | ✔ | `EASY`/`MEDIUM`/`HARD` |
+**Vai trò:** MEMBER · **Màn hình:** S04 · **Owner:** BE-B · **Idempotency:** RECOMMENDED (chưa có kho replay cho create)
+Tạo task + vòng 1 + revision #1 `DRAFT`, chưa được thực hiện. `title` (3–120) và `cycleId` bắt buộc. Member mặc định `assigneeId` từ phiên đăng nhập, gửi ID người khác → 403; TL phải chọn một thành viên đang hoạt động. Các trường `description` (≤4000), `expectedOutput` (≤2000), `startAt`, `deadline`, `difficulty` tùy chọn khi lưu nháp; nếu có phải hợp lệ. Ngày bắt đầu không vượt deadline, deadline trong kỳ và hạn nhóm. Gửi duyệt mới bắt đủ các trường kế hoạch. Response 201 `TaskDetail`.
 
-Response `201` `TaskDetail` (`planStatus=DRAFT`, `committed=false`).
-Lỗi: `400 VALIDATION_FAILED`, `403 LEAD_ONLY`, `409 CYCLE_CLOSED`, `422 ASSIGNEE_NOT_IN_GROUP | START_AFTER_DEADLINE | DEADLINE_OUTSIDE_CYCLE | DEADLINE_AFTER_GROUP_DEADLINE`.
+#### `POST /groups/{groupId}/plans/submit`
+**Vai trò:** ASSIGNEE của tất cả dòng · **Màn hình:** S04 · **Owner:** BE-B · **Idempotency:** RECOMMENDED (durable replay)
+Request `SubmitPlanBatchRequest`: `{ items: [{ planId, version }] }`, từ 1 đến 100 dòng, không trùng ID, cùng nhóm. Kiểm quyền, version và điều kiện gửi của từng dòng trong **một transaction**; một dòng sai rollback toàn lô. Lỗi có `fieldErrors.items[index]`. Response 200 `SubmitPlanBatchResponse` chứa các `PlanMutationResponse`. TL vẫn duyệt từng kế hoạch.
+
+#### `POST /plans/{planId}/cancel`
+**Vai trò:** người tạo/người thực hiện · **Màn hình:** S05 · **Owner:** BE-B · **Idempotency:** version
+Request `{version}`; chỉ hủy revision đề xuất chưa được duyệt, có `baseRevisionId`, trong vòng còn sửa được. Đặt `CANCELLED`, giải phóng vị trí revision đang mở; giữ kế hoạch hiệu lực, audit và lịch sử. Không hủy nháp đầu tiên hoặc task đã cam kết. Response 200 `PlanMutationResponse`.
 
 #### `GET /tasks/{taskId}`
 **Vai trò:** MEMBER (của nhóm chứa task) · **Màn hình:** S05 (và S06/S10/S11 tham chiếu) · **Owner:** BE-B · **Idempotency:** —
-Response `200` `TaskDetail`. Phần chính:
+Query `roundId?`: mặc định vòng mới nhất; có ID thì phải thuộc task. Vòng lịch sử trả `isHistorical=true`, kế hoạch/lần nộp đã chốt, kèm nút về vòng hiện tại. Response `200` `TaskDetail`. Phần chính:
 ```json
 { "…": "TaskSummary",
   "description": "API cho module nhóm và task", "expectedOutput": "OpenAPI + 12 endpoint chạy được",
@@ -739,7 +745,7 @@ Lỗi: `403 NOT_ASSIGNEE`, `409 INVALID_PLAN_STATE`, `409 VERSION_CONFLICT`, `42
 Request `VersionedRequest`. `PENDING_APPROVAL` → `DRAFT` (có audit) để sửa tiếp. Response `200` `PlanMutationResponse`. Lỗi: `409 INVALID_PLAN_STATE`, `409 VERSION_CONFLICT`, `403 NOT_ASSIGNEE`.
 
 #### `POST /plans/{planId}/review`
-**Vai trò:** LEAD · **Màn hình:** S05 (`Duyệt kế hoạch`/`Yêu cầu chỉnh sửa`) · **Owner:** BE-B · **Idempotency:** **REQUIRED**
+**Vai trò:** LEAD · **Màn hình:** S05 (`Duyệt kế hoạch`/`Yêu cầu chỉnh sửa`) · **Owner:** BE-B · **Idempotency:** RECOMMENDED
 Request `ReviewPlanRequest`:
 | Trường | Kiểu | Bắt buộc | Ràng buộc |
 |---|---|---|---|
@@ -752,7 +758,7 @@ Lỗi: `403 LEAD_ONLY`, `409 INVALID_PLAN_STATE` (không còn `PENDING_APPROVAL`
 
 #### `POST /tasks/{taskId}/plan-revisions`
 **Vai trò:** ASSIGNEE (người thực hiện hiện tại) · **Màn hình:** S05 (`Đề xuất thay đổi`) · **Owner:** BE-B · **Idempotency:** RECOMMENDED
-Tạo revision mới từ bản hiệu lực khi cần đổi tuần/phạm vi/đầu ra/người phụ trách/mốc thời gian/độ khó (BR02). Request `ProposeChangeRequest`: `changeReason` (5–1000 ✔), các trường đề xuất tùy chọn (`title, description, expectedOutput, cycleId, assigneeId, startAt, deadline, difficulty`; phải đổi ít nhất một), `submitNow?` (true → gửi TL luôn, phát `PLAN_CHANGE_SUBMITTED`). Response `201` `PlanMutationResponse` (`status=DRAFT` hoặc `PENDING_APPROVAL`; `changes[]` có so sánh cũ/mới). Bản hiệu lực **giữ nguyên** trong lúc chờ.
+Tạo revision mới từ bản hiệu lực khi cần đổi tuần/phạm vi/đầu ra/mốc thời gian/độ khó (BR02). Request `ProposeChangeRequest`: `changeReason` (5–1000 ✔), các trường đề xuất tùy chọn (`title, description, expectedOutput, cycleId, assigneeId, startAt, deadline, difficulty`; phải đổi ít nhất một), `submitNow?` (true → gửi TL luôn, phát `PLAN_CHANGE_SUBMITTED`). Response `201` `PlanMutationResponse` (`status=DRAFT` hoặc `PENDING_APPROVAL`; `changes[]` có so sánh cũ/mới). Bản hiệu lực **giữ nguyên** trong lúc chờ. Không đổi assignee của kế hoạch đã duyệt qua revision; phải dùng bàn giao có Helper xác nhận. Có thể hủy revision đang mở để nộp kết quả.
 Lỗi: `403 NOT_ASSIGNEE`, `409 NO_EFFECTIVE_PLAN`, `409 REVISION_ALREADY_IN_FLIGHT` (tối đa một bản đang soạn/chờ mỗi vòng), `409 CYCLE_CLOSED` (kỳ của vòng đã đóng → dùng chuyển kỳ), `422 NO_CHANGES_PROPOSED | DEADLINE_OUTSIDE_CYCLE | DEADLINE_AFTER_GROUP_DEADLINE | START_AFTER_DEADLINE | ASSIGNEE_NOT_IN_GROUP`.
 
 #### `POST /tasks/{taskId}/start`
@@ -778,7 +784,7 @@ Lỗi: `403 LEAD_ONLY`, `400 VALIDATION_FAILED` (người thực hiện không p
 ### G. Nộp minh chứng & quyết định TL, chuyển kỳ *(BE-B · `task`)*
 
 #### `POST /task-rounds/{roundId}/submissions`
-**Vai trò:** ASSIGNEE (người thực hiện hiện tại trong kế hoạch/bàn giao hiệu lực) · **Màn hình:** S05 (`Gửi kết quả`), S06 (nộp trước khi xác nhận) · **Owner:** BE-B · **Idempotency:** **REQUIRED**
+**Vai trò:** ASSIGNEE (người thực hiện hiện tại trong kế hoạch/bàn giao hiệu lực) · **Màn hình:** S05 (`Gửi kết quả`), S06 (nộp trước khi xác nhận) · **Owner:** BE-B · **Idempotency:** RECOMMENDED
 Nộp minh chứng → task `SUBMITTED` (**không** `DONE`). Cho nộp **nhiều lần** trước `closesAt` của kỳ chứa vòng (mọi bản cũ được giữ; bản mới nhất là bản TL xét). Request `SubmitResultRequest`:
 | Trường | Kiểu | Bắt buộc | Ràng buộc |
 |---|---|---|---|
@@ -816,12 +822,13 @@ Response `200` `ReviewPreviewResponse`:
 `awardPreview = null` nếu task không có điểm. Số "sau" là **dự kiến**, lấy tổng ledger thật (không cộng dự kiến như điểm đã có). Lỗi: `404 NOT_FOUND`.
 
 #### `POST /task-submissions/{submissionId}/review`
-**Vai trò:** REVIEWER (§4.4) · **Màn hình:** S05 (TL), S11 · **Owner:** BE-B · **Idempotency:** **REQUIRED**
+**Vai trò:** REVIEWER (§4.4) · **Màn hình:** S05 (TL), S11 · **Owner:** BE-B · **Idempotency:** RECOMMENDED
 Đường **duy nhất** để duyệt kết quả (cả S05 lẫn S11 — task thường và task làm thay), nên hai đường UI không thể cấp hai khoản điểm. Request `ReviewResultRequest`:
 | Trường | Kiểu | Bắt buộc | Ràng buộc |
 |---|---|---|---|
 | `decision` | `TaskReviewDecision` | ✔ | `ACCEPTED` \| `FIX_REQUIRED` \| `UPDATE_REQUIRED` |
 | `issueDescription` | string\|null | khi ≠ `ACCEPTED` | 10–2000: mô tả lỗi/yêu cầu |
+| `carryover` | `CarryoverRequest` | | Chỉ TL, chỉ quyết định cần sửa/cập nhật; review và chuyển kỳ cùng transaction |
 
 Điều kiện server: `now > closesAt` của kỳ chứa vòng; submission là **bản nộp chốt** (mới nhất ≤ cutoff); quyền duyệt theo §4.4.
 - `ACCEPTED`: **một transaction** — review `ACCEPTED`, task `DONE`, round `ACCEPTED`, `completedAt = submittedAt` (bản được chấp nhận), `acceptedAt = reviewedAt`; nếu task có điểm: settlement + **đúng một** `AWARD +P_t` cho người nhận theo assignment `CURRENT`; nếu bản nộp thuộc SupportWork: work `APPROVED`, help request `COMPLETED`, contribution `CONFIRMED`; audit; `POINTS_AWARDED` (hoặc `CONTRIBUTION_CONFIRMED` nếu không có điểm) + `TASK_REVIEWED`. Lỗi giữa chừng → rollback toàn bộ.
@@ -841,12 +848,13 @@ Response `200` `ReviewResultResponse`:
 Lặp cùng `decision` trên bản đã duyệt → `200` kết quả hiện có (`Idempotent-Replayed: true` nếu cùng khóa). Lỗi: `403 NOT_AUTHORIZED_REVIEWER`, `403 SELF_ACTION_FORBIDDEN`, `409 REVIEW_BEFORE_CUTOFF`, `409 STALE_SUBMISSION` (có bản nộp mới hơn/quyền nhận vừa đổi → tải lại preview), `409 SUBMISSION_ALREADY_REVIEWED` (khác quyết định), `409 INDEPENDENT_REVIEWER_REQUIRED`, `409 HELP_REQUEST_BLOCKS_REVIEW` (còn yêu cầu hỗ trợ `OPEN` giữ quỹ task — TL đóng yêu cầu trước, 12.8.4), `400 VALIDATION_FAILED` (thiếu `issueDescription`).
 
 #### `POST /task-rounds/{roundId}/carryover`
-**Vai trò:** LEAD · **Màn hình:** S05 (`Chốt deadline xử lý tiếp`), S03 (hàng đợi) · **Owner:** BE-B · **Idempotency:** **REQUIRED**
+**Vai trò:** LEAD · **Màn hình:** S05 (`Chốt deadline xử lý tiếp`), S03 (hàng đợi) · **Owner:** BE-B · **Idempotency:** RECOMMENDED
 Chuyển **chỉ** task đã bị `FIX_REQUIRED`/`UPDATE_REQUIRED` hoặc **thiếu kết quả** khi đóng kỳ sang một vòng mới cùng `taskId`, liên kết vòng cũ (BR18). Request `CarryoverRequest`:
 | Trường | Kiểu | Bắt buộc | Ràng buộc |
 |---|---|---|---|
 | `targetCycleId` | Uuid | ✔ | kỳ **sau** kỳ nguồn, chưa đóng, cùng nhóm |
-| `deadline` | IsoInstant | ✔ | `> now` và `periodStartAt < deadline <= closesAt` của kỳ đích |
+| `deadline` | IsoInstant | ✔ | `> now`, trong kỳ đích và không vượt cuối ngày hạn nhóm |
+| `sourceReportItemId` | Uuid\|null | | Dòng đề xuất đã gửi thuộc vòng nguồn; đổi hạn đề xuất cần `decisionReason` ≥5 ký tự |
 | `startAt` | IsoInstant\|null | | mặc định `max(now, periodStartAt)` |
 | `scopeNote` | string\|null | | ≤2000, phạm vi sửa/cập nhật |
 | `decisionReason` | string\|null | **bắt buộc (≥5)** nếu kỳ đích không phải kỳ liền sau | ≤1000 |
@@ -897,17 +905,19 @@ Lưu bản **nháp** (không cần đủ task). Request `SaveReportRequest`:
 | Trường | Kiểu | Bắt buộc | Ràng buộc |
 |---|---|---|---|
 | `items[].taskId` | Uuid | ✔ | thuộc phạm vi bắt buộc của tôi trong kỳ |
-| `items[].declaredResult` | `CheckpointTaskResult` | ✔ | `RESULT_SUBMITTED` chỉ khi **có lần nộp thật**; `RESULT_MISSING` chỉ khi **chưa** có |
+| `items[].declaredResult` | `CheckpointTaskResult` | ✔ | `RESULT_SUBMITTED` khi có lần nộp hoặc minh chứng đang soạn; không thể khai thiếu nếu đã có kết quả |
 | `items[].riskLevel` | `ReportRiskLevel` | ✔ | `ON_TRACK`/`AT_RISK`/`NEEDS_LEAD_HELP` |
 | `items[].note` | string\|null | | ≤1000 (tiến độ/trở ngại) |
-| `items[].expectedCompletionAt` | IsoInstant\|null | | chỉ thông tin, **không đổi deadline** |
+| `items[].expectedCompletionAt` | IsoInstant\|null | khi gửi mà chưa có kết quả | Ở tương lai, trong kỳ hiện có và hạn nhóm; không tự đổi deadline |
+| `items[].roundId`, `planRevisionId`, `submissionId` | Uuid\|null | FE gửi từ DTO | Kiểm phiên bản round/plan/submission; thay đổi → 409 |
+| `items[].evidence`, `resultNote` | EvidenceItem[], string\|null | | Lưu nháp minh chứng; khi gửi tạo submission chung với S05/S10, HTTPS có host, 1–5 link; note ≤2000 |
 | `version` | number\|null | ✔ | từ `MyReportResponse.version` (null nếu chưa có báo cáo) |
 
-Response `200` `MyReportResponse` (`status=DRAFT`). Lỗi: `409 REPORT_WINDOW_NOT_OPEN`, `409 CYCLE_CLOSED`, `409 VERSION_CONFLICT`, `422 RESULT_DECLARATION_MISMATCH`, `400 VALIDATION_FAILED`. `NEEDS_LEAD_HELP` không tự đăng công khai; FE gợi ý mở S07.
+Response `200` `MyReportResponse` (`status=DRAFT`). Lỗi: `409 REPORT_WINDOW_NOT_OPEN`, `409 CYCLE_CLOSED`, `409 VERSION_CONFLICT`, `422 RESULT_DECLARATION_MISMATCH`, `400 VALIDATION_FAILED`. `NEEDS_LEAD_HELP` chỉ dành cho task chưa có kết quả, không tự đăng công khai; S07 chỉ mở nếu `canReportDifficulty=true`. Khi gửi mà chưa xong, `note` và ngày giờ dự kiến bắt buộc; lưu nháp được thiếu.
 
 #### `POST /groups/{groupId}/checkpoint-cycles/{cycleId}/my-report/submit`
-**Vai trò:** MEMBER (của chính mình) · **Màn hình:** S06 (`Gửi báo cáo tuần`) · **Owner:** BE-B · **Idempotency:** **REQUIRED**
-Request `SubmitReportRequest`: `items?` (như trên; nếu có → lưu rồi gửi trong một thao tác, hỗ trợ **xác nhận hàng loạt**: FE chỉ cần gửi các item đã điền sẵn), `version` (number|null ✔). Điều kiện: **mọi task bắt buộc** đều có item hợp lệ. Thành công: bản `SUBMITTED` bất biến, `submittedAt` do server cấp, cập nhật số liệu dashboard. Response `200` `MyReportResponse` (`state=SUBMITTED`, `submittedLabel="Đã gửi đầy đủ"`).
+**Vai trò:** MEMBER (của chính mình) · **Màn hình:** S06 (`Gửi báo cáo tuần`) · **Owner:** BE-B · **Idempotency:** RECOMMENDED
+Request `SubmitReportRequest`: `items?` (như trên; nếu có → lưu rồi gửi trong một thao tác, hỗ trợ **xác nhận hàng loạt**: FE chỉ cần gửi các item đã điền sẵn), `version` (number|null ✔). Điều kiện: **mọi task bắt buộc** đều có item hợp lệ. Bước lưu nháp giữ dữ liệu nếu thiếu trường; bước gửi khóa và kiểm lại đúng draft ID/version/tập vòng/plan/submission. Các bản nộp mới và trạng thái SUBMITTED commit nguyên tử; lỗi bất kỳ dòng nào rollback mọi submission mới. Thành công: bản `SUBMITTED` bất biến, `submittedAt` do server cấp, cập nhật số liệu dashboard. Response `200` `MyReportResponse` (`state=SUBMITTED`, `submittedLabel="Đã gửi đầy đủ"`).
 Lỗi: `422 REPORT_INCOMPLETE` (nháp vẫn được lưu; `fieldErrors` = `items[<taskId>]` còn thiếu), `422 RESULT_DECLARATION_MISMATCH`, `409 REPORT_WINDOW_NOT_OPEN`, `409 CYCLE_CLOSED`, `409 VERSION_CONFLICT`.
 **Lưu ý:** thiếu báo cáo ≠ task trễ (task đã nộp thật mà quên báo cáo hiện `Thiếu báo cáo` + `Có kết quả, chờ TL duyệt`, không bị đổi thành "chưa nộp").
 
@@ -1029,7 +1039,7 @@ Request `CreateHelpRequestRequest`:
 | `skillNotes` | string\|null | | ≤1000 |
 | `privacyChecked` | `true` | ✔ | TL xác nhận đã kiểm tra không lộ lý do riêng tư |
 
-Server điền: `deadline`/`difficulty`/`expectedOutput`/`points` từ kế hoạch hiệu lực + quỹ task, `resultApprover` (= LEAD, hoặc người duyệt độc lập nếu task của chính LEAD), giữ **toàn bộ P_t** bằng reservation `HELD` (nếu task có quỹ). Chỉ cho task **chưa nộp** hoặc đã bị `FIX_REQUIRED`/`UPDATE_REQUIRED`. Phát `HELP_PUBLISHED` (cả nhóm trừ người đăng) và `SUPPORT_DECISION` cho người gửi đề nghị riêng (nếu có). Response `201` `HelpRequestDetail`.
+Server điền: `deadline`/`difficulty`/`expectedOutput`/`points` từ kế hoạch hiệu lực + quỹ task, `resultApprover` (= LEAD, hoặc người duyệt độc lập nếu task của chính LEAD), giữ **toàn bộ P_t** bằng reservation `HELD` (nếu task có quỹ). Chỉ cho vòng hiện tại có kế hoạch hiệu lực, chưa nộp/chưa báo cáo và chưa qua cutoff. Task bị trả sửa phải chuyển kỳ trước. Yêu cầu OPEN chuyển sang vòng mới khi carryover: cập nhật hạn, tăng version, buộc offer đang chờ xác nhận lại; vòng lịch sử giữ nguyên. Phát `HELP_PUBLISHED` (cả nhóm trừ người đăng) và `SUPPORT_DECISION` cho người gửi đề nghị riêng (nếu có). Response `201` `HelpRequestDetail`.
 Lỗi: `403 LEAD_ONLY`, `409 TASK_ALREADY_DONE`, `409 TASK_AWAITING_REVIEW` (bản nộp đang chờ TL duyệt phải được kiểm tra trước), `409 TASK_NOT_TRANSFERABLE`, `409 HELP_REQUEST_ALREADY_OPEN` (mỗi task chỉ một yêu cầu còn hiệu lực), `422 BENEFICIARY_MISMATCH`, `400 VALIDATION_FAILED`.
 
 #### `GET /help-requests/{helpRequestId}`

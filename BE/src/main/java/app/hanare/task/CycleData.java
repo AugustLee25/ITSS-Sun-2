@@ -79,7 +79,7 @@ public class CycleData {
 			Map<UUID, Ctx> ctx = reader.loadAll(snaps.stream().map(a -> (UUID) a[1]).toList());
 			for (Object[] a : snaps) {
 				out.add(new Row((UUID) a[1], (UUID) a[2], (UUID) a[3], (String) a[4], (Instant) a[5], (String) a[6], (UUID) a[0],
-						ctx.get((UUID) a[1])));
+						reader.atCutoff(ctx.get((UUID) a[1]),cy.id())));
 			}
 			return out;
 		}
@@ -277,6 +277,7 @@ public class CycleData {
 				"review", review, "completedAt", c.round().completedAt(), "acceptedAt", c.round().acceptedAt(),
 				"completedLate", completedLate, "reported", it != null, "declaredResult", it == null ? null : it.declared(),
 				"riskLevel", it == null ? null : it.riskLevel(), "reportNote", showNote && it != null ? it.note() : null,
+				"expectedCompletionAt", showNote && it != null ? it.expectedAt() : null,
 				"carryover", carry));
 		return m;
 	}

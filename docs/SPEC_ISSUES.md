@@ -43,3 +43,19 @@
 - [BE-Pha3] `VALIDATION_FAILED` luôn HTTP **400** trên toàn BE (theo §1.7/§9); các chỗ §5 từng ghi `422 VALIDATION_FAILED` (duyệt kế hoạch thiếu `note`, duyệt kết quả thiếu `issueDescription`, `independent-reviewer`, `risk-reports.affectedTaskIds`) đã đổi thành 400. 422 chỉ dành cho mã nghiệp vụ riêng (`DEADLINE_OUTSIDE_CYCLE`, `EVIDENCE_REQUIRED`…).
 - [BE-Pha3] Idempotency header: chỉ module `help`/`points` bắt `Idempotency-Key` (400 nếu thiếu); `task`/`schedule` dựa vào idempotency tự nhiên + ràng buộc DB; chưa có kho "phát lại response đã lưu" (`Idempotent-Replayed`, `IDEMPOTENCY_KEY_REUSED`) ở bất kỳ module nào.
 - [BE-Pha3] Profile `demo`: đồng hồ `DemoClock` đứng yên (tua bằng `POST /demo/clock`), token sống 30 ngày; dữ liệu mẫu nạp bằng chính API sau `ApplicationReadyEvent`; `GET /demo/accounts` trả 503 `DEMO_LOADING` tới khi nạp xong.
+
+
+## Áp dụng rà soát checkpoint — 16/11/2026
+
+Các dòng dưới đây cập nhật các quyết định cũ cùng chủ đề theo yêu cầu sửa code trực tiếp dựa trên `RA_SOAT_NGHIEP_VU_CHECKPOINT.md`. Dùng mặc định mục 9 của bản rà soát; không sửa đặc tả gốc để mất dấu thay đổi.
+
+- [Workflow/KH1] Member tự tạo nháp cho mình (tên/kỳ bắt buộc), TL vẫn giao task. Gửi 1–100 kế hoạch của mình nguyên tử theo version; TL duyệt từng dòng. Revision đề xuất có thể CANCELLED; nháp đầu/task đã cam kết không bị xóa.
+- [Workflow/QH] Chỉ vòng hiện tại đã duyệt, ACTIVE, chưa nộp/chưa gửi report và chưa qua cutoff được start/progress/hỗ trợ riêng/đổi kế hoạch/bàn giao. Ngày bắt đầu vẫn là dự kiến. Đổi người trên kế hoạch đã duyệt phải qua bàn giao được Helper xác nhận.
+- [Workflow/BC1] S06 nhập minh chứng HTTPS tại dòng, lưu nháp trước; khi gửi tạo task submission và report trong cùng transaction, kể cả Helper. Task chưa xong bắt buộc lý do và ngày giờ tương lai trong kỳ hiện có/hạn nhóm. Ngày dự kiến không tự đổi deadline; khác quy tắc cũ “nếu biết”.
+- [Workflow/LS] Gửi report khóa thao tác ngoài luồng theo vòng, vẫn cho revision S06 trước cutoff. Bản gửi cũ giữ plan/submission/minh chứng; nháp không thay bản chốt. Kiểm draft ID/version/tập nghĩa vụ lần cuối để chống hai tab/race. Dữ liệu cũ thiếu plan ID giữ nguyên, không đoán để backfill.
+- [Workflow/BIEN] Nhận đến `closesAt` (bao gồm); job/review/carryover chỉ sau thời điểm này. Cùng thứ tự khóa project → cycle → round. Quyết định sau cutoff tự đóng băng trước, không phụ thuộc thời điểm job chạy.
+- [Workflow/HT] S05 không tạo submission rời của Helper; dùng S10/S06 chung writer và liên kết contribution. Carryover giữ Helper/quyền nhận điểm; yêu cầu OPEN cập nhật vòng/hạn và buộc offer chờ xác nhận lại. Giữ nguyên nội dung hỗ trợ công khai đã được TL viết, không tự sao chép ghi chú riêng sang đó.
+- [Workflow/BC2/LOC] Mẫu số báo cáo chỉ tính người có task bắt buộc; lọc kỳ lấy đúng vòng lịch sử. Nghĩa vụ báo cáo vẫn theo kỳ chứa deadline; chưa triển khai báo tiến độ mỗi tuần cho task dài nhiều kỳ.
+- [Workflow/TL] TL có thể review cần sửa + carryover nguyên tử hoặc tách hai bước; reviewer độc lập chỉ review. Hạn mới trong kỳ và hạn nhóm; khác đề xuất thành viên hoặc bỏ qua kỳ cần lý do. Kỳ có task/kế hoạch/báo cáo được giữ khi đổi lịch; duyệt kế hoạch kiểm lại điều kiện hiện hành.
+- [Workflow/TQ] S03 bỏ nháp/task tương lai/đã DONE, ưu tiên tồn đọng. Card vàng khi lỡ 1 cutoff, đỏ pastel từ 2; không cộng thời gian chờ reviewer. Không thay màu thành viên C02. Hai bộ DTO task và points dùng chung phép tính trạng thái/đúng hạn/risk.
+- [Workflow/API] V31 thêm plan reference và pending evidence cho report, nguồn report item cho carryover, CANCELLED và kho replay. Module task tiếp tục nhận client cũ không gửi Idempotency-Key; FE luôn gửi khóa ổn định cho batch/report/submission/review/carryover. Các thao tác này lưu JSON response bền, xung đột body trả 409; không áp TTL/không thêm replay header. Ngoài các đường đã nêu, giữ cơ chế idempotency tự nhiên hiện có của help/points, không khẳng định đã có kho replay toàn hệ thống.

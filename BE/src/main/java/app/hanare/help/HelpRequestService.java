@@ -80,6 +80,7 @@ public class HelpRequestService {
 	@Transactional
 	public HelpRequestDetail create(UUID projectId, CurrentUser user, String idempotencyKey, CreateHelpRequestRequest req) {
 		GroupMembership lead = access.requireLeader(projectId, user);
+		app.hanare.task.WorkflowLocks.project(jdbc, projectId);
 		IdempotencyKey.require(idempotencyKey);
 		if (!Boolean.TRUE.equals(req.privacyChecked())) {
 			throw ApiException.validation("privacyChecked", "TL phải xác nhận đã kiểm tra nội dung không lộ lý do riêng tư.");
@@ -185,6 +186,7 @@ public class HelpRequestService {
 	public PageOf<HelpRequestCard> list(UUID projectId, CurrentUser user, String tab, String difficulty, java.time.Instant from,
 			java.time.Instant to, Long minUnits, Long maxUnits, Integer maxEffort, Integer page, Integer size) {
 		access.requireMember(projectId, user);
+		app.hanare.task.WorkflowLocks.project(jdbc, projectId);
 		int[] ps = Refs.pageArgs(page, size);
 		String t = tab == null ? "OPEN" : tab;
 		if (!TABS.contains(t)) {
@@ -243,6 +245,7 @@ public class HelpRequestService {
 	public HelpRequestDetail get(UUID helpRequestId, CurrentUser user) {
 		Req r = views.req(helpRequestId);
 		GroupMembership m = access.requireMember(r.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, r.projectId());
 		works.syncProject(r.projectId());
 		return views.detail(views.req(helpRequestId), user.id(), m.isLeader());
 	}
@@ -253,6 +256,7 @@ public class HelpRequestService {
 	public HelpRequestDetail update(UUID helpRequestId, CurrentUser user, UpdateHelpRequestRequest req) {
 		Req r0 = views.req(helpRequestId);
 		GroupMembership lead = access.requireLeader(r0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, r0.projectId());
 		Req r = views.reqForUpdate(helpRequestId);
 		requireRequester(r, lead);
 		if (!"OPEN".equals(r.status())) {
@@ -287,6 +291,7 @@ public class HelpRequestService {
 	public HelpRequestDetail cancel(UUID helpRequestId, CurrentUser user, CancelHelpRequestRequest req) {
 		Req r0 = views.req(helpRequestId);
 		GroupMembership lead = access.requireLeader(r0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, r0.projectId());
 		Req r = views.reqForUpdate(helpRequestId);
 		requireRequester(r, lead);
 		if ("CANCELLED".equals(r.status())) {

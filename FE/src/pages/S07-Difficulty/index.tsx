@@ -17,6 +17,7 @@ import {
   RiskType,
   SupportRequestAction,
   SupportRequestLeadAction,
+  TaskAction,
   type SupportRequest,
 } from '@/api/types'
 import { useGroup } from '@/app/group/groupContext'
@@ -107,7 +108,7 @@ function NewRequest({ onClose }: { onClose: () => void }) {
           <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" form="support-form" loading={create.isPending}>
+          <Button type="submit" form="support-form" loading={create.isPending} disabled={!task.data?.allowedActions.includes(TaskAction.REPORT_DIFFICULTY)}>
             {t('support.send')}
           </Button>
         </>
@@ -116,7 +117,8 @@ function NewRequest({ onClose }: { onClose: () => void }) {
       <UnsavedChangesGuard when={form.formState.isDirty && !sentId} />
       {task.isLoading ? <LoadingSkeleton variant="text" /> : null}
       {task.isError ? <InlineError error={task.error} onRetry={() => void task.refetch()} /> : null}
-      {task.data ? (
+      {task.data && !task.data.allowedActions.includes(TaskAction.REPORT_DIFFICULTY) ? <InlineError tone="warning" message={t('workflow.difficultyLocked')} /> : null}
+      {task.data?.allowedActions.includes(TaskAction.REPORT_DIFFICULTY) ? (
         <form id="support-form" noValidate onSubmit={(event) => void submit(event)} className={styles.stack}>
           <p>
             <strong>{t('fields.task')}: </strong>

@@ -247,7 +247,7 @@ class CheckpointJobTest {
 		assertThat(cycleStatus(a.id(), 1)).isEqualTo("OPEN");
 		assertThat(recording.calls).isEmpty();
 
-		RunResult r = job.runOnce(at("2026-11-20T15:00:00Z")); // đúng 22:00 thứ Sáu giờ VN
+		RunResult r = job.runOnce(at("2026-11-20T15:00:00.001Z")); // đúng 22:00 thứ Sáu giờ VN
 		assertThat(r.closed()).isEqualTo(1); // chỉ nhóm A; nhóm B chốt Chủ nhật
 		assertThat(r.opened()).isEqualTo(1); // kỳ 2 của A mở ngay
 		assertThat(cycleStatus(a.id(), 1)).isEqualTo("CLOSED");
@@ -255,7 +255,7 @@ class CheckpointJobTest {
 		assertThat(cycleStatus(b.id(), 1)).isEqualTo("OPEN");
 		assertThat(jdbc.sql("SELECT closed_at FROM checkpoint_cycles WHERE project_id = :p AND sequence_no = 1")
 				.param("p", a.id()).query((rs, i) -> app.hanare.common.DbTime.instant(rs, "closed_at")).single())
-				.isEqualTo(at("2026-11-20T15:00:00Z"));
+				.isEqualTo(at("2026-11-20T15:00:00.001Z"));
 
 		UUID aCycle1 = jdbc.sql("SELECT id FROM checkpoint_cycles WHERE project_id = :p AND sequence_no = 1")
 				.param("p", a.id()).query(UUID.class).single();
@@ -264,17 +264,17 @@ class CheckpointJobTest {
 		assertThat(ref.id()).isEqualTo(aCycle1);
 		assertThat(ref.projectId()).isEqualTo(a.id());
 		assertThat(ref.status()).isEqualTo("CLOSED");
-		assertThat(ref.closedAt()).isEqualTo(at("2026-11-20T15:00:00Z"));
+		assertThat(ref.closedAt()).isEqualTo(at("2026-11-20T15:00:00.001Z"));
 		assertThat(ref.closesAt()).isEqualTo(at("2026-11-20T15:00:00Z"));
 		assertThat(counting.ids).containsExactly(aCycle1); // hook thứ hai cũng được gọi
 
 		// chạy lại: không đóng/không gọi hook lần hai
-		assertThat(job.runOnce(at("2026-11-20T15:00:00Z")).closed()).isZero();
+		assertThat(job.runOnce(at("2026-11-20T15:00:00.001Z")).closed()).isZero();
 		assertThat(job.runOnce(at("2026-11-20T18:00:00Z")).closed()).isZero();
 		assertThat(recording.calls).hasSize(1);
 
 		// nhóm B chốt Chủ nhật 20:00 giờ VN, độc lập
-		assertThat(job.runOnce(at("2026-11-22T13:00:00Z")).closed()).isEqualTo(1);
+		assertThat(job.runOnce(at("2026-11-22T13:00:00.001Z")).closed()).isEqualTo(1);
 		assertThat(cycleStatus(b.id(), 1)).isEqualTo("CLOSED");
 		assertThat(recording.calls).hasSize(2);
 		assertThat(recording.calls.get(1).projectId()).isEqualTo(b.id());
@@ -284,7 +284,7 @@ class CheckpointJobTest {
 	void aFailingHookRollsTheCloseBackAndTheNextRunRetries() throws Exception {
 		Group a = group("Nhóm A", 5, "22:00", 2);
 		recording.failNext = true;
-		RunResult first = job.runOnce(at("2026-11-20T15:00:00Z"));
+		RunResult first = job.runOnce(at("2026-11-20T15:00:00.001Z"));
 		assertThat(first.closed()).isZero();
 		assertThat(cycleStatus(a.id(), 1)).isEqualTo("OPEN"); // transaction được hoàn tác: kỳ chưa đóng
 		assertThat(jdbc.sql("SELECT closed_at IS NULL FROM checkpoint_cycles WHERE project_id = :p AND sequence_no = 1")
@@ -304,7 +304,7 @@ class CheckpointJobTest {
 		assertThat(reminderEvents(a.id())).isEqualTo(1);
 		assertThat(remindedRecipients(a.id())).hasSize(5);
 
-		assertThat(concurrently(3, at("2026-11-20T15:00:00Z")).stream().mapToInt(RunResult::closed).sum()).isEqualTo(1);
+		assertThat(concurrently(3, at("2026-11-20T15:00:00.001Z")).stream().mapToInt(RunResult::closed).sum()).isEqualTo(1);
 		assertThat(recording.calls).hasSize(1);
 		assertThat(counting.ids).hasSize(1);
 		assertThat(cycleStatus(a.id(), 1)).isEqualTo("CLOSED");

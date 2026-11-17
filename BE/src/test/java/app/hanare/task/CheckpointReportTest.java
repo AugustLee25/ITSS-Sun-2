@@ -16,7 +16,7 @@ class CheckpointReportTest extends B1Base {
 	}
 
 	private String item(Task t, String declared, String risk) {
-		return "{\"taskId\":\"" + t.taskId() + "\",\"declaredResult\":\"" + declared + "\",\"riskLevel\":\"" + risk + "\"}";
+		return body("taskId",t.taskId(),"declaredResult",declared,"riskLevel",risk,"note","Đang xử lý phần còn lại","expectedCompletionAt","2026-11-25T10:00:00Z");
 	}
 
 	@Test

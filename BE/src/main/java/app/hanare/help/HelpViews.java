@@ -312,7 +312,11 @@ public class HelpViews {
 	}
 
 	public SubmitCheck submitCheck(Work w, Req r) {
-		if (!"IN_PROGRESS".equals(w.status()) && !"REVISION_REQUESTED".equals(w.status())) {
+		return submitCheck(w,r,false);
+	}
+
+	public SubmitCheck submitCheck(Work w, Req r, boolean fromReport) {
+		if (!"IN_PROGRESS".equals(w.status()) && !"REVISION_REQUESTED".equals(w.status()) && !"SUBMITTED".equals(w.status())) {
 			String msg = switch (w.status()) {
 				case "SUBMITTED" -> "Kết quả đã được gửi và đang chờ TL xác nhận.";
 				case "APPROVED" -> "Phần việc đã được xác nhận.";
@@ -329,6 +333,8 @@ public class HelpViews {
 		if (clock.instant().isAfter(f.cycleClosesAt())) {
 			return new SubmitCheck(false, new ReasonRef("SUBMISSION_WINDOW_CLOSED", "Kỳ chứa vòng này đã đóng, không nộp thêm được."));
 		}
+		if(!fromReport && app.hanare.task.TaskWritePolicy.reported(jdbc,f.roundId()))
+			return new SubmitCheck(false,new ReasonRef("WORK_NOT_SUBMITTABLE","Hãy cập nhật minh chứng qua báo cáo checkpoint."));
 		return new SubmitCheck(true, null);
 	}
 

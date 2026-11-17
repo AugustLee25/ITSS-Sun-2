@@ -139,6 +139,7 @@ public class PointLedgerService {
 		SettlementRow s = loadSettlement(settlementId)
 				.orElseThrow(() -> ApiException.notFound("Không tìm thấy khoản điểm."));
 		GroupMembership m = access.requireMember(s.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, s.projectId());
 		jdbc.sql("SELECT id FROM task_point_budgets WHERE id = :b FOR UPDATE").param("b", s.budgetId()).query(UUID.class)
 				.single();
 		s = loadSettlement(settlementId).orElseThrow();

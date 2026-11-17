@@ -30,6 +30,10 @@ interface Draft {
   risk: ReportRiskLevel | null
   note: string
   date: string
+  time: string
+  completed: boolean
+  links: string
+  resultNote: string
   /** Đã được người dùng xác nhận (điền sẵn của server chưa tính là phản hồi). */
   confirmed: boolean
   noteOpen: boolean
@@ -46,15 +50,15 @@ const buildDrafts = (items: ReportItem[], timeZone: string): Drafts =>
         risk: item.riskLevel,
         note: item.note ?? '',
         date: isoToZonedInput(item.expectedCompletionAt, timeZone).date,
+        time: isoToZonedInput(item.expectedCompletionAt, timeZone).time || '17:00',
+        completed: !!item.submission || !!item.draftEvidence?.length,
+        links: (item.draftEvidence ?? []).map((e) => e.url).join('\n'),
+        resultNote: item.draftResultNote ?? '',
         confirmed: !item.prefilled && item.riskLevel !== null,
         noteOpen: !!item.note,
       },
     ]),
   )
-
-/** `RESULT_SUBMITTED` chỉ khi có lần nộp thật (server từ chối nếu lệch) → suy từ dữ liệu server, không cho chọn tay. */
-const declared = (item: ReportItem) =>
-  item.declaredResult ?? (item.submission ? CheckpointTaskResult.RESULT_SUBMITTED : CheckpointTaskResult.RESULT_MISSING)
 
 /** Lỗi theo task của server: `items[<taskId>]` hoặc `items[<chỉ số>]`. */
 function itemErrors(error: unknown, items: ReportItem[]): Record<string, string> {
@@ -121,9 +125,13 @@ function ReportForm({
   const [drafts, setDrafts] = useState(() => buildDrafts(items, f.timeZone))
   const [baseline, setBaseline] = useState(() => JSON.stringify(drafts))
   const [checked, setChecked] = useState(false)
+  const [localErrors, setLocalErrors] = useState<Record<string, string>>({})
   const [done, setDone] = useState(false)
   const dirty = JSON.stringify(drafts) !== baseline
-  const patch = (taskId: string, change: Partial<Draft>) => setDrafts((d) => ({ ...d, [taskId]: { ...d[taskId], ...change } }))
+  const patch = (taskId: string, change: Partial<Draft>) => {
+    setDrafts((d) => ({ ...d, [taskId]: { ...(d[taskId] ?? buildDrafts(items, f.timeZone)[taskId]), ...change } }))
+    setLocalErrors((errors) => { const next = { ...errors }; delete next[taskId]; return next })
+  }
 
   useEffect(() => {
     if (done) onClose()
@@ -138,21 +146,27 @@ function ReportForm({
   const otherItems = items.filter((item) => !item.submission)
   const unconfirmedSubmitted = submittedItems.filter((item) => !drafts[item.taskId]?.confirmed)
 
+  const getDraft = (item: ReportItem) => drafts[item.taskId] ?? buildDrafts([item], f.timeZone)[item.taskId]
   const toInput = (item: ReportItem): ReportItemInput => {
-    const d = drafts[item.taskId]
+    const d = getDraft(item)
     return {
       taskId: item.taskId,
-      declaredResult: declared(item),
-      riskLevel: d.risk ?? ReportRiskLevel.ON_TRACK,
+      roundId: item.roundId,
+      planRevisionId: item.currentPlanRevisionId ?? item.planRevisionId ?? undefined,
+      submissionId: item.currentSubmissionId ?? item.submission?.id ?? null,
+      declaredResult: d.completed ? CheckpointTaskResult.RESULT_SUBMITTED : CheckpointTaskResult.RESULT_MISSING,
+      evidence: d.completed ? d.links.split('\n').map((url) => url.trim()).filter(Boolean).map((url) => ({ type: 'URL' as const, url })) : [],
+      resultNote: d.resultNote.trim() || null,
+      riskLevel: d.completed ? ReportRiskLevel.ON_TRACK : d.risk ?? ReportRiskLevel.ON_TRACK,
       note: d.note.trim() || null,
-      expectedCompletionAt: d.date ? zonedTimeToIso(d.date, '23:59', f.timeZone) : null,
+      expectedCompletionAt: !d.completed && d.date ? zonedTimeToIso(d.date, d.time, f.timeZone) : null,
     }
   }
 
   const confirmSubmitted = () =>
     setDrafts((d) => {
       const next = { ...d }
-      for (const item of unconfirmedSubmitted) next[item.taskId] = { ...next[item.taskId], confirmed: true, risk: next[item.taskId].risk ?? ReportRiskLevel.ON_TRACK }
+      for (const item of unconfirmedSubmitted) next[item.taskId] = { ...getDraft(item), confirmed: true, risk: getDraft(item).risk ?? ReportRiskLevel.ON_TRACK }
       return next
     })
 
@@ -176,6 +190,14 @@ function ReportForm({
       document.getElementById(`item-${missing[0].taskId}`)?.scrollIntoView?.({ block: 'center' })
       return
     }
+    const invalid: Record<string, string> = {}
+    for (const item of items) {
+      const d = getDraft(item)
+      if (!d.completed && (!d.note.trim() || !d.date || !zonedTimeToIso(d.date, d.time, f.timeZone))) invalid[item.taskId] = t('workflow.required')
+      if (d.completed && !item.submission && !d.links.trim()) invalid[item.taskId] = t('workflow.evidenceRequired')
+    }
+    setLocalErrors(invalid)
+    if (Object.keys(invalid).length) return
     submit.mutate(
       { items: items.map(toInput), version: report.version },
       {
@@ -199,14 +221,14 @@ function ReportForm({
   }
 
   const error = submit.error ?? save.error
-  const perItem = itemErrors(error, items)
+  const perItem = { ...itemErrors(error, items), ...localErrors }
   const conflict = isApiError(error) && error.code === 'VERSION_CONFLICT'
   const showGlobalError = error && !(Object.keys(perItem).length > 0 && !conflict)
 
   const renderItem = (item: ReportItem) => {
-    const d = drafts[item.taskId]
+    const d = getDraft(item)
     const itemError = perItem[item.taskId] ?? (checked && !answered(item) ? t('checkpoint.itemUnanswered') : undefined)
-    const noteVisible = !item.submission || d.noteOpen || d.risk !== ReportRiskLevel.ON_TRACK
+    const noteVisible = !d.completed || d.noteOpen || d.risk !== ReportRiskLevel.ON_TRACK
     return (
       <li key={item.taskId} id={`item-${item.taskId}`} className={`${styles.item} ${itemError ? styles.itemInvalid : ''}`}>
         <div className={styles.itemHead}>
@@ -227,14 +249,15 @@ function ReportForm({
           </div>
         </div>
         {item.expectedOutput ? <p className={styles.muted}>{t('checkpoint.output', { output: item.expectedOutput })}</p> : null}
+        {item.planReferenceKnown === false ? <p className={styles.muted}>{t('workflow.planUnknown')}</p> : null}
         <p>
           <strong>{t('checkpoint.declared')}: </strong>
-          {declared(item) === CheckpointTaskResult.RESULT_SUBMITTED ? t('checkpoint.resultSubmitted') : t('checkpoint.resultMissing')}
+          {d.completed ? t('checkpoint.resultSubmitted') : t('checkpoint.resultMissing')}
           <span className={styles.muted}> · {item.timelinessLabel}</span>
         </p>
         {item.submission ? (
           <div className={styles.muted}>
-            {t('checkpoint.submittedAt', { at: f.dateTime(item.submission.submittedAt) })} · {t('checkpoint.notAccepted')}
+            {t('checkpoint.submittedAt', { at: f.dateTime(item.submission.submittedAt) })} · <span>{item.submission.reviewDecision === 'ACCEPTED' ? t('workflow.accepted') : item.submission.reviewDecision ? t(`overview.reviewDecision.${item.submission.reviewDecision}`) : t('workflow.pending')}</span>
             <ul className={styles.links}>
               {item.submission.evidence.map((evidence) => (
                 <li key={evidence.url}>
@@ -247,6 +270,19 @@ function ReportForm({
           </div>
         ) : null}
         <fieldset className={styles.radios} disabled={!canEdit}>
+          <legend>{t('checkpoint.declared')}</legend>
+          <label><input type="radio" name={'result-' + item.taskId} checked={d.completed} onChange={() => patch(item.taskId, { completed: true, confirmed: true, risk: ReportRiskLevel.ON_TRACK })} />{t('workflow.result')}</label>
+          <label><input type="radio" name={'result-' + item.taskId} checked={!d.completed} disabled={!!item.submission} onChange={() => patch(item.taskId, { completed: false, confirmed: true })} />{t('workflow.missing')}</label>
+        </fieldset>
+        {d.completed && canEdit ? <>
+          <FormField label={t('workflow.evidence')} hint={t('workflow.evidenceHint')} required={!item.submission}>
+            <Textarea rows={2} value={d.links} onChange={(e) => patch(item.taskId, { links: e.target.value, confirmed: true })} />
+          </FormField>
+          <FormField label={t('workflow.resultNote')}>
+            <Textarea rows={2} maxLength={2000} value={d.resultNote} onChange={(e) => patch(item.taskId, { resultNote: e.target.value, confirmed: true })} />
+          </FormField>
+        </> : null}
+        <fieldset className={styles.radios} disabled={!canEdit || d.completed}>
           <legend>{t('checkpoint.risk')}</legend>
           {RISKS.map((risk) => (
             <label key={risk} className={styles.radio}>
@@ -260,7 +296,7 @@ function ReportForm({
             </label>
           ))}
         </fieldset>
-        {d.risk === ReportRiskLevel.NEEDS_LEAD_HELP ? (
+        {d.risk === ReportRiskLevel.NEEDS_LEAD_HELP && item.canReportDifficulty && canEdit && !d.completed ? (
           <p className={styles.muted}>
             {t('checkpoint.needHelpHint')}{' '}
             <Link to={paths.taskDifficulty(groupId, item.taskId)} preventScrollReset>
@@ -270,12 +306,16 @@ function ReportForm({
         ) : null}
         {noteVisible ? (
           <>
-            <FormField label={t('checkpoint.note')}>
-              <Textarea rows={2} maxLength={1000} value={d.note} disabled={!canEdit} onChange={(e) => patch(item.taskId, { note: e.target.value })} />
+            <FormField label={d.completed ? t('checkpoint.note') : t('workflow.reason')} required={!d.completed}>
+              <Textarea rows={2} maxLength={1000} value={d.note} disabled={!canEdit} onChange={(e) => patch(item.taskId, { note: e.target.value, confirmed: true })} />
             </FormField>
-            {!item.submission ? (
-              <FormField label={t('checkpoint.expectedDate')} hint={t('checkpoint.expectedHint')}>
-                <Input type="date" value={d.date} disabled={!canEdit} onChange={(e) => patch(item.taskId, { date: e.target.value })} />
+            {!d.completed ? (
+              <FormField label={t('workflow.expected')} hint={t('checkpoint.expectedHint')} required>
+                {(controlProps) => <div>
+                <Input {...controlProps} type="date" value={d.date} disabled={!canEdit} onChange={(e) => patch(item.taskId, { date: e.target.value, confirmed: true })} />
+                <Input type="time" aria-label={t('workflow.expectedTime')} value={d.time} disabled={!canEdit} onChange={(e) => patch(item.taskId, { time: e.target.value, confirmed: true })} />
+                {d.date && zonedTimeToIso(d.date, d.time, f.timeZone) ? <p>{Date.parse(zonedTimeToIso(d.date, d.time, f.timeZone)!) > Date.parse(item.deadline) ? t('workflow.extension') : t('workflow.inTime')}</p> : null}
+                </div>}
               </FormField>
             ) : null}
           </>
@@ -307,7 +347,7 @@ function ReportForm({
               {t('checkpoint.saveDraft')}
             </Button>
             <Button loading={submit.isPending} disabled={items.length === 0} onClick={send}>
-              {t('checkpoint.submit')}
+              {report.status === 'SUBMITTED' ? t('workflow.update') : t('checkpoint.submit')}
             </Button>
           </>
         ) : (

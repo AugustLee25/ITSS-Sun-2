@@ -74,7 +74,7 @@ public class CheckpointJob {
 	public RunResult runOnce(Instant now) {
 		int closed = 0;
 		for (UUID id : ids("""
-				SELECT id FROM checkpoint_cycles WHERE status IN ('SCHEDULED', 'OPEN') AND closes_at <= :now ORDER BY closes_at
+				SELECT id FROM checkpoint_cycles WHERE status IN ('SCHEDULED', 'OPEN') AND closes_at < :now ORDER BY closes_at
 				""", now)) {
 			closed += attempt("đóng kỳ " + id, () -> closeOne(id, now));
 		}
@@ -129,13 +129,16 @@ public class CheckpointJob {
 
 	/** Khóa dòng kỳ nếu còn thỏa điều kiện; rỗng nếu đã đổi trạng thái hoặc đang bị transaction khác giữ. */
 	private Optional<UUID> lock(UUID cycleId, String condition, Instant now) {
+		UUID project = jdbc.sql("SELECT project_id FROM checkpoint_cycles WHERE id = :c").param("c", cycleId).query(UUID.class).optional().orElse(null);
+		if (project == null) return Optional.empty();
+		app.hanare.task.WorkflowLocks.project(jdbc, project);
 		return jdbc.sql("SELECT project_id FROM checkpoint_cycles WHERE id = :id AND " + condition
 				+ " FOR UPDATE SKIP LOCKED")
 				.param("id", cycleId).param("now", DbTime.toDb(now)).query(UUID.class).optional();
 	}
 
 	private int closeOne(UUID cycleId, Instant now) {
-		Optional<UUID> projectId = lock(cycleId, "status IN ('SCHEDULED', 'OPEN') AND closes_at <= :now", now);
+		Optional<UUID> projectId = lock(cycleId, "status IN ('SCHEDULED', 'OPEN') AND closes_at < :now", now);
 		if (projectId.isEmpty()) {
 			return 0;
 		}

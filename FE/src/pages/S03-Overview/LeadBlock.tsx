@@ -10,14 +10,20 @@ import styles from './Overview.module.css'
 
 function QueueList({ groupId, items }: { groupId: string; items: ReviewQueueItem[] }) {
   const chip = useStatusChip()
+  const t = useT()
+  const f = useFormatters()
   return (
     <ul className={styles.stack}>
-      {items.map(({ row }) => (
+      {items.map(({ row, submission }) => (
         <li key={`${row.taskId}-${row.roundId}`} className={styles.queueItem}>
-          <Link to={paths.task(groupId, row.taskId)} className={styles.actionLink}>
+          <Link to={paths.task(groupId, row.taskId) + '?roundId=' + encodeURIComponent(row.roundId)} className={styles.actionLink}>
             {row.title}
           </Link>
-          <p className={styles.muted}>{row.assignee.name}</p>
+          <p className={styles.muted}>{row.assignee.name} · {f.dateTime(row.deadline)}</p>
+          {submission?.evidence.map((e) => <a key={e.url} href={e.url} target="_blank" rel="noreferrer">{e.label || e.url}</a>)}
+          {row.reportNote ? <p>{row.reportNote}</p> : null}
+          {row.expectedCompletionAt ? <p>{t('workflow.proposed', { at: f.dateTime(row.expectedCompletionAt) })}</p> : null}
+          {!row.reported ? <p>{t('workflow.reportMissing')}</p> : null}
           <StatusChip tone={chip('timeliness', row.timeliness).tone} size="sm" label={row.timelinessLabel} />
         </li>
       ))}

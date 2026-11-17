@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { useMembers } from '@/api/groups'
-import { useCycles } from '@/api/schedule'
-import { useTasks } from '@/api/tasks'
+import { useCycleOptions } from '@/api/schedule'
+import { useTasks, useSubmitPlanBatch } from '@/api/tasks'
 import {
   Difficulty,
   PlanStatus,
   TaskListTab,
   TaskStatus,
+  TaskAction,
 } from '@/api/types'
 import { useGroup } from '@/app/group/groupContext'
 import { Button, EmptyState, FormField, InlineError, Input, LoadingSkeleton, PageHeader, Select } from '@/components'
@@ -34,10 +35,12 @@ export default function S04Tasks() {
   const [params, setParams] = useSearchParams()
   const filters = parseFilters(params)
   const [creating, setCreating] = useState(false)
+  const [selected, setSelected] = useState<Record<string, { planId: string; version: number }>>({})
+  const batch = useSubmitPlanBatch(groupId)
 
   const tasks = useTasks(groupId, toListQuery(filters, timeZone))
   const members = useMembers(groupId)
-  const cycles = useCycles(groupId)
+  const cycles = useCycleOptions(groupId)
   const cycleItems = cycles.data?.items ?? []
   const selectedCycle = cycleItems.find((cycle) => cycle.id === filters.cycleId)
   const filterCount = activeFilterCount(filters)
@@ -56,11 +59,11 @@ export default function S04Tasks() {
         title={t('tasks.title')}
         description={t('tasks.viewingWeek', { label: selectedCycle?.label ?? t('tasks.filterAll') })}
         actions={
-          isLeader ? (
+          (
             <Button icon="plus" onClick={() => setCreating(true)}>
-              {t('tasks.assign')}
+              {isLeader ? t('tasks.assign') : t('workflow.create')}
             </Button>
-          ) : undefined
+          )
         }
       />
 
@@ -82,7 +85,7 @@ export default function S04Tasks() {
           {filterCount > 0 ? t('tasks.filtersActive', { count: filterCount }) : t('tasks.filters')}
         </Button>
         {filterCount > 0 ? (
-          <Button variant="ghost" onClick={() => update({ cycleId: '', assigneeId: '', planStatus: '', taskStatus: '', difficulty: '', q: '', from: '', to: '' })}>
+          <Button variant="ghost" onClick={() => update({ cycleId: '', assigneeId: '', planStatus: '', taskStatus: '', difficulty: '', completion: '', q: '', from: '', to: '' })}>
             {t('tasks.filtersClear')}
           </Button>
         ) : null}
@@ -110,6 +113,7 @@ export default function S04Tasks() {
                 ))}
               </Select>
             </FormField>
+            {cycles.hasNextPage ? <Button variant="secondary" loading={cycles.isFetchingNextPage} onClick={() => void cycles.fetchNextPage()}>{t('workflow.cyclesMore')}</Button> : null}
             <FormField label={t('tasks.filterAssignee')}>
               <Select value={filters.assigneeId} onChange={(event) => update({ assigneeId: event.target.value })}>
                 <option value="">{t('tasks.filterAll')}</option>
@@ -123,11 +127,17 @@ export default function S04Tasks() {
             <FormField label={t('tasks.filterPlan')}>
               <Select value={filters.planStatus} onChange={(event) => update({ planStatus: event.target.value })}>
                 <option value="">{t('tasks.filterAll')}</option>
-                {Object.values(PlanStatus).map((status) => (
+                {Object.values(PlanStatus).filter((status) => status !== PlanStatus.CANCELLED).map((status) => (
                   <option key={status} value={status}>
                     {t(`status.plan.${status}`)}
                   </option>
                 ))}
+              </Select>
+            </FormField>
+            <FormField label={t('workflow.completion')}>
+              <Select value={filters.completion ?? ''} onChange={(event) => update({ completion: event.target.value })}>
+                <option value="">{t('workflow.all')}</option><option value="DONE">{t('workflow.done')}</option>
+                <option value="UNFINISHED">{t('workflow.unfinished')}</option><option value="OVERDUE">{t('workflow.overdue')}</option>
               </Select>
             </FormField>
             <FormField label={t('tasks.filterExecution')}>
@@ -201,9 +211,15 @@ export default function S04Tasks() {
             <p className={styles.muted} aria-live="polite">
               {t('tasks.resultCount', { count: page?.totalItems ?? items.length })}
             </p>
+            {Object.keys(selected).length > 0 ? <Button loading={batch.isPending} onClick={() => batch.mutate(Object.values(selected), { onSuccess: () => setSelected({}) })}>{t('workflow.batch', { count: Object.keys(selected).length })}</Button> : null}
+            {batch.error ? <InlineError error={batch.error} /> : null}
             <ul className={styles.list} aria-label={t('tasks.listLabel')}>
               {items.map((task) => (
-                <li key={task.id}>
+                <li key={task.id + '-' + task.roundId}>
+                  {task.draftPlanId && task.draftPlanVersion != null && task.allowedActions.includes(TaskAction.SUBMIT_PLAN) ? <label>
+                    <input type="checkbox" aria-label={t('workflow.select', { title: task.title })} checked={!!selected[task.id]} onChange={(event) => setSelected((old) => {
+                      const next = { ...old }; if (event.target.checked) next[task.id] = { planId: task.draftPlanId!, version: task.draftPlanVersion! }; else delete next[task.id]; return next
+                    })} />{t('workflow.select', { title: task.title })}</label> : null}
                   <TaskSummaryCard task={task} groupId={groupId} />
                 </li>
               ))}

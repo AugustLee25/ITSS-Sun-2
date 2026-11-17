@@ -41,6 +41,44 @@ describe('taskQuery', () => {
 })
 
 describe('S04 — danh sách công việc', () => {
+  it('thành viên lưu task nháp cho chính mình khi chưa nhập đủ kế hoạch', async () => {
+    const api = mockApi([
+      ['GET', `/groups/${GROUP_ID}/tasks`, page([])],
+      ['POST', `/groups/${GROUP_ID}/tasks`, taskDetail({ title: 'Nháp của An' })],
+      ...commonRoutes(GroupRole.MEMBER),
+    ])
+    const user = userEvent.setup()
+    renderApp(`/groups/${GROUP_ID}/tasks`)
+    await user.click(await screen.findByRole('button', { name: 'Thêm task nháp' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Thêm task nháp' })
+    await user.type(within(dialog).getByLabelText(/^Tên task/), 'Nháp của An')
+    await user.selectOptions(within(dialog).getByLabelText(/^Tuần/), 'cyc-3')
+    expect(within(dialog).queryByLabelText(/^Người phụ trách/)).not.toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Lưu nháp' }))
+    await waitFor(() => expect(api.writes('POST', `/groups/${GROUP_ID}/tasks`)).toHaveLength(1))
+    expect(api.writes('POST', `/groups/${GROUP_ID}/tasks`)[0].body).toEqual({ title: 'Nháp của An', assigneeId: AN.userId, cycleId: 'cyc-3' })
+  })
+
+  it('chọn nhiều kế hoạch gửi một lô và lưu bộ lọc đang trễ trên URL', async () => {
+    const api = mockApi([
+      ['GET', `/groups/${GROUP_ID}/tasks`, page([
+        taskSummary({ id: 'one', title: 'Nháp một', committed: false, allowedActions: ['SUBMIT_PLAN'], draftPlanId: 'p1', draftPlanVersion: 2 }),
+        taskSummary({ id: 'two', title: 'Nháp hai', committed: false, allowedActions: ['SUBMIT_PLAN'], draftPlanId: 'p2', draftPlanVersion: 4 }),
+      ])],
+      ['POST', `/groups/${GROUP_ID}/plans/submit`, { items: [] }],
+      ...commonRoutes(GroupRole.MEMBER),
+    ])
+    const user = userEvent.setup()
+    renderApp(`/groups/${GROUP_ID}/tasks`)
+    await user.click(await screen.findByRole('checkbox', { name: 'Chọn kế hoạch Nháp một' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Chọn kế hoạch Nháp hai' }))
+    await user.click(screen.getByRole('button', { name: 'Chốt và gửi 2 kế hoạch' }))
+    await waitFor(() => expect(api.writes('POST', `/groups/${GROUP_ID}/plans/submit`)).toHaveLength(1))
+    expect(api.writes('POST', `/groups/${GROUP_ID}/plans/submit`)[0].body).toEqual({ items: [{ planId: 'p1', version: 2 }, { planId: 'p2', version: 4 }] })
+    await user.click(screen.getByRole('button', { name: 'Bộ lọc' }))
+    await user.selectOptions(screen.getByLabelText('Tiến độ công việc'), 'OVERDUE')
+    await waitFor(() => expect(api.calls.some((call) => call.path.endsWith('/tasks') && call.search.get('completion') === 'OVERDUE')).toBe(true))
+  })
   it('Member: thẻ có hai nhãn kế hoạch/thực hiện tách bạch + nhãn đúng hạn do server; đổi tab gọi lại API; không có "Giao task"', async () => {
     const api = mockApi([
       [

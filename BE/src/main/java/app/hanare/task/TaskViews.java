@@ -34,9 +34,10 @@ public class TaskViews {
 	}
 
 	/** Dữ liệu phụ đọc theo lô cho nhiều task. */
-	public record Extras(Map<UUID, Pt> points, Map<UUID, UUID> openHelp, Map<UUID, String> risk) {
+	public record Extras(Map<UUID, Pt> points, Map<UUID, UUID> openHelp, Map<UUID, String> risk,
+			java.util.Set<UUID> reported, Map<UUID, UUID> supportWorks) {
 		static Extras empty() {
-			return new Extras(Map.of(), Map.of(), Map.of());
+			return new Extras(Map.of(), Map.of(), Map.of(), java.util.Set.of(), Map.of());
 		}
 	}
 
@@ -46,11 +47,13 @@ public class TaskViews {
 	private final JdbcClient jdbc;
 	private final TaskReader reader;
 	private final JsonMapper mapper;
+	private final MissedCheckpoints missed;
 
-	public TaskViews(JdbcClient jdbc, TaskReader reader, JsonMapper mapper) {
+	public TaskViews(JdbcClient jdbc, TaskReader reader, JsonMapper mapper, MissedCheckpoints missed) {
 		this.jdbc = jdbc;
 		this.reader = reader;
 		this.mapper = mapper;
+		this.missed = missed;
 	}
 
 	// ------------------------------------------------------------------ dữ liệu phụ
@@ -94,7 +97,14 @@ public class TaskViews {
 			risk.put(J.uuid(rs, "round_id"), rs.getString("risk"));
 			return 0;
 		}).list();
-		return new Extras(points, help, risk);
+		java.util.Set<UUID> reported = new java.util.HashSet<>(jdbc.sql("""
+				SELECT DISTINCT i.round_id FROM checkpoint_report_items i JOIN checkpoint_reports r ON r.id = i.report_id
+				 WHERE i.round_id IN (:ids) AND r.status = 'SUBMITTED'
+				""").param("ids", roundIds).query(UUID.class).list());
+		Map<UUID, UUID> works = new HashMap<>();
+		jdbc.sql("SELECT h.task_id, w.id FROM support_works w JOIN help_requests h ON h.id = w.help_request_id WHERE h.task_id IN (:ids) AND w.status <> 'APPROVED'")
+				.param("ids", taskIds).query((rs, i) -> { works.put(J.uuid(rs, "task_id"), J.uuid(rs, "id")); return 0; }).list();
+		return new Extras(points, help, risk, reported, works);
 	}
 
 	// ------------------------------------------------------------------ quyền duyệt (spec 4.4)
@@ -135,13 +145,16 @@ public class TaskViews {
 		UUID me = v.id();
 		boolean isExec = me.equals(c.executor());
 		CycleRow cyc = s.cycle(c.round().cycleId());
-		boolean closed = now.isAfter(cyc.closesAt());
+		boolean closed = cyc.isClosed(now);
 		Plan open = c.open();
 		Plan eff = c.effective();
 		String state = c.round().state();
 		boolean active = "ACTIVE".equals(state) || "AWAITING_REVIEW".equals(state);
 		boolean finished = "ACCEPTED".equals(state) || "CARRIED_OVER".equals(state);
-		if (open != null && List.of("DRAFT", "CHANGES_REQUESTED").contains(open.status())) {
+		boolean executing = TaskWritePolicy.canExecute(s, c, x.reported().contains(c.round().id()));
+		boolean planEditable = !closed && !finished && (eff == null || executing);
+		if (planEditable && open != null && open.baseRevisionId() != null && isExec) a.add("CANCEL_PLAN_REVISION");
+		if (planEditable && open != null && List.of("DRAFT", "CHANGES_REQUESTED").contains(open.status())) {
 			if (me.equals(open.assigneeId()) || (v.lead() && "DRAFT".equals(open.status()))) {
 				a.add("EDIT_PLAN");
 			}
@@ -149,7 +162,7 @@ public class TaskViews {
 				a.add("SUBMIT_PLAN");
 			}
 		}
-		if (open != null && "PENDING_APPROVAL".equals(open.status())) {
+		if (planEditable && open != null && "PENDING_APPROVAL".equals(open.status())) {
 			if (me.equals(open.submittedBy())) {
 				a.add("WITHDRAW_PLAN");
 			}
@@ -157,20 +170,21 @@ public class TaskViews {
 				a.add("REVIEW_PLAN");
 			}
 		}
-		if (eff != null && active && !closed && open == null && isExec) {
+		if (executing && open == null && isExec) {
 			a.add("PROPOSE_CHANGE");
 		}
-		if (eff != null && "ACTIVE".equals(state) && isExec && "TODO".equals(e.taskStatus())) {
+		if (executing && isExec && "TODO".equals(e.taskStatus())) {
 			a.add("START");
 		}
-		if (eff != null && active && isExec && !closed) {
+		if (executing && isExec) {
 			a.add("UPDATE_PROGRESS");
-			a.add("SUBMIT_RESULT");
 		}
+		if (eff != null && active && isExec && !closed && !x.reported().contains(c.round().id())
+				&& !x.supportWorks().containsKey(c.round().taskId()) && open == null) a.add("SUBMIT_RESULT");
 		if (eff != null && isExec && !finished && cyc.reportWindowOpen(now)) {
 			a.add("REPORT_CHECKPOINT");
 		}
-		if (eff != null && isExec && !finished) {
+		if (executing && isExec && !v.lead()) {
 			a.add("REPORT_DIFFICULTY");
 		}
 		if (c.sub() != null && c.rev() == null && closed && "AWAITING_REVIEW".equals(state)
@@ -180,7 +194,7 @@ public class TaskViews {
 		if (v.lead() && e.needsCarryover()) {
 			a.add("SET_CARRYOVER");
 		}
-		if (v.lead() && Objects.equals(c.executor(), s.leaderId()) && !"ACCEPTED".equals(state)) {
+		if (v.lead() && Objects.equals(c.executor(), s.leaderId()) && !finished) {
 			a.add("DESIGNATE_REVIEWER");
 		}
 		if (c.sub() != null) {
@@ -191,12 +205,21 @@ public class TaskViews {
 
 	// ------------------------------------------------------------------ TaskSummary
 	public Map<String, Object> summary(Scope s, Ctx c, Viewer v, Extras x) {
+		return summary(s, c, v, x, s.now());
+	}
+
+	/** asOf applies to display metrics only; action permissions always use the real server time. */
+	public Map<String, Object> summary(Scope s, Ctx c, Viewer v, Extras x, Instant displayAt) {
 		CycleRow cyc = s.cycle(c.cycleId());
-		Eval e = TaskReader.eval(c, c.deadline(), s.now(), s.cycle(c.round().cycleId()).closesAt(), false);
+		Eval e = TaskReader.eval(c, c.deadline(), displayAt, s.cycle(c.round().cycleId()).closesAt(), false);
 		Plan d = c.display();
 		UUID taskId = c.round().taskId();
 		Pt pt = x.points().get(taskId);
 		String planStatus = c.effective() != null ? "APPROVED" : d == null ? "DRAFT" : d.status();
+		Instant asOf = displayAt.isAfter(cyc.closesAt()) && !reader.currentRoundOf(taskId).orElseThrow().equals(c.round().id()) ? cyc.closesAt() : displayAt;
+		int missedCount = missed.count(s, taskId, asOf);
+		boolean overdue = c.committed() && !"DONE".equals(e.taskStatus()) && !"ON_TIME_PENDING_REVIEW".equals(e.timeliness())
+				&& (e.isLate() || missedCount > 0);
 		return J.o(
 				"id", taskId, "groupId", s.projectId(), "title", d == null ? "" : d.title(),
 				"difficulty", d == null ? null : d.difficulty(),
@@ -206,9 +229,12 @@ public class TaskViews {
 				"committed", c.committed(), "planStatus", planStatus,
 				"pendingRevisionStatus", c.effective() != null && c.open() != null ? c.open().status() : null,
 				"pendingRevisionId", c.effective() != null && c.open() != null ? c.open().id() : null,
+				"draftPlanId", c.open() == null ? null : c.open().id(), "draftPlanVersion", c.open() == null ? null : c.open().version(),
 				"taskStatus", e.taskStatus(), "riskStatus", x.risk().getOrDefault(c.round().id(), "NORMAL"),
 				"timeliness", e.timeliness(), "timelinessLabel", e.label(), "isLate", e.isLate(),
 				"needsCarryover", e.needsCarryover(), "carryoverReason", e.carryoverReason(),
+				"roundState", c.round().state(), "missedCheckpointCount", missedCount, "currentlyOverdue", overdue,
+				"isHistorical", !reader.currentRoundOf(taskId).orElseThrow().equals(c.round().id()),
 				"latestSubmittedAt", c.sub() == null ? null : c.sub().submittedAt(),
 				"points", pointsBrief(s, pt, e, v), "hasOpenHelpRequest", x.openHelp().containsKey(taskId),
 				"version", c.round().taskVersion(), "allowedActions", allowed(s, c, e, v, x));
@@ -352,7 +378,7 @@ public class TaskViews {
 		}
 		List<Map<String, Object>> out = new ArrayList<>();
 		for (int i = 0; i < subs.size(); i++) {
-			out.add(submission(s, subs.get(i), c.round().taskId(), revs.get(subs.get(i).id()), i == subs.size() - 1));
+			out.add(submission(s, subs.get(i), c.round().taskId(), revs.get(subs.get(i).id()), c.sub()!=null && subs.get(i).id().equals(c.sub().id())));
 		}
 		return out;
 	}
@@ -419,6 +445,12 @@ public class TaskViews {
 		m.put("independentReviewer", s.user(c.round().independentApproverId()));
 		m.put("lastProgress", lastProgress(s, c.round().id()));
 		m.put("helpRequestId", x.openHelp().get(c.round().taskId()));
+		m.put("supportWorkId", x.supportWorks().get(c.round().taskId()));
+		m.put("carryoverProposal", !v.lead() && !v.id().equals(c.executor()) ? null : jdbc.sql("""
+				SELECT i.id, i.expected_completion_at, i.note FROM checkpoint_report_items i JOIN checkpoint_reports rep ON rep.id=i.report_id
+				 WHERE i.round_id=:r AND rep.status='SUBMITTED' ORDER BY rep.revision_no DESC LIMIT 1
+				""").param("r",c.round().id()).query((rs,i)->J.o("reportItemId",J.uuid(rs,"id"),
+						"expectedCompletionAt",J.inst(rs,"expected_completion_at"),"note",rs.getString("note"))).optional().orElse(null));
 		boolean mine = c.committed() && v.id().equals(c.executor());
 		m.put("checkpoint", mine ? J.o("cycle", s.cycleRef(c.round().cycleId()), "myReportState",
 				reportState(c.round().cycleId(), v.id()), "reportWindowOpen", s.cycle(c.round().cycleId()).reportWindowOpen(s.now()))

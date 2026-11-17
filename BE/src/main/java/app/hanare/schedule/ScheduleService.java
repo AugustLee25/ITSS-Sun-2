@@ -254,6 +254,12 @@ public class ScheduleService {
 			List<CyclePlan> plans = ScheduleCalculator.chain(spec, anchor.start(), null, unopened.size());
 			repo.regenerate(scheduleId, unopened.stream().map(CycleRow::id).toList(), plans);
 		}
+		List<UUID> invalidTasks = jdbc.sql("""
+				SELECT DISTINCT r.task_id FROM task_review_rounds r JOIN task_plan_revisions p ON p.id = r.effective_plan_id
+				 JOIN checkpoint_cycles c ON c.id = r.cycle_id WHERE r.project_id = :p
+				 AND (p.deadline <= c.period_start_at OR p.deadline > c.closes_at)
+				""").param("p", groupId).query(UUID.class).list();
+		if (!invalidTasks.isEmpty()) throw ApiException.validation("schedule", "Lịch mới làm deadline ra ngoài kỳ của task: " + invalidTasks);
 		topUp(groupId, now);
 		syncGroupTimezone(groupId, spec.zone());
 

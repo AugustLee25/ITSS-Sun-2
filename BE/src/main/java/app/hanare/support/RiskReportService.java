@@ -92,6 +92,7 @@ public class RiskReportService {
 	@Transactional
 	public RiskReportDto create(UUID projectId, CurrentUser user, CreateRiskReportRequest req) {
 		GroupMembership m = access.requireMember(projectId, user);
+		app.hanare.task.WorkflowLocks.project(jdbc, projectId);
 		boolean dropout = req.riskType() == SupportDtos.RiskType.DROPOUT_RISK;
 		if (dropout && !m.isLeader()) {
 			throw ApiException.of(ErrorCode.LEAD_ONLY, "Chỉ TL được xác nhận nguy cơ bỏ việc.");
@@ -195,6 +196,7 @@ public class RiskReportService {
 	public RiskReportDto resolve(UUID riskId, CurrentUser user, ResolveRiskRequest req) {
 		Row r0 = load(riskId);
 		GroupMembership m = access.requireMember(r0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, r0.projectId());
 		if (!m.isLeader() && !user.id().equals(r0.reportedBy())) {
 			throw ApiException.forbidden("Chỉ TL hoặc người đã báo mới giải quyết được nguy cơ này.");
 		}

@@ -52,6 +52,7 @@ public class CycleLifecycle implements CutoffHook {
 	@Transactional
 	public void onCycleClosed(CycleService.CycleRef ref) {
 		UUID projectId = ref.projectId();
+		WorkflowLocks.project(jdbc, projectId);
 		UUID cycleId = ref.id();
 		jdbc.sql("SELECT id FROM checkpoint_cycles WHERE id = :c FOR UPDATE").param("c", cycleId).query(UUID.class).list();
 		if (data.frozen(cycleId)) {
@@ -127,6 +128,23 @@ public class CycleLifecycle implements CutoffHook {
 		finalizeIfDone(cycleId);
 	}
 
+	/** Review/carryover may arrive before the scheduled tick. Freeze the source first, in this transaction. */
+	@Transactional
+	public void ensureFrozen(UUID cycleId) {
+		UUID projectId = jdbc.sql("SELECT project_id FROM checkpoint_cycles WHERE id = :c").param("c", cycleId).query(UUID.class).single();
+		WorkflowLocks.project(jdbc, projectId);
+		jdbc.sql("SELECT id FROM checkpoint_cycles WHERE id = :c FOR UPDATE").param("c", cycleId).query(UUID.class).single();
+		Scope s = scopes.of(projectId);
+		CycleRow cy = s.cycle(cycleId);
+		if (!ops.now().isAfter(cy.closesAt())) throw ApiException.invalidState("Chưa qua giờ chốt kỳ.");
+		if ("CANCELLED".equals(cy.status())) throw ApiException.invalidState("Kỳ đã hủy.");
+		if (data.frozen(cycleId)) return;
+		jdbc.sql("UPDATE checkpoint_cycles SET status = 'CLOSED', closed_at = :at, version = version + 1 WHERE id = :c AND status IN ('SCHEDULED','OPEN')")
+				.param("c", cycleId).param("at", DbTime.toDb(ops.now())).update();
+		onCycleClosed(new CycleService.CycleRef(cy.id(), projectId, cy.sequenceNo(), cy.previousCycleId(), cy.periodStartAt(),
+				cy.opensAt(), cy.reminderAt(), cy.closesAt(), "CLOSED", ops.now(), null));
+	}
+
 	// ------------------------------------------------------------------ LeadCycleSummary
 	@Transactional(readOnly = true)
 	public Map<String, Object> leadSummary(UUID projectId, UUID cycleId, boolean atCutoff) {
@@ -145,7 +163,8 @@ public class CycleLifecycle implements CutoffHook {
 	Map<String, Object> compute(Scope s, CycleRow cy, boolean cutoff) {
 		List<Row> rows = data.rows(s, cy);
 		Reports rep = data.reports(cy);
-		List<UUID> members = access.activeMemberIds(s.projectId());
+		List<UUID> members = access.activeMemberIds(s.projectId()).stream()
+				.filter(m -> rows.stream().anyMatch(r -> m.equals(r.assigneeId()))).toList();
 		List<Map<String, Object>> notResponded = new ArrayList<>();
 		int reported = 0;
 		for (UUID m : members) {
@@ -206,6 +225,9 @@ public class CycleLifecycle implements CutoffHook {
 	/** CLOSED → FINALIZED khi mọi task có quyết định và việc cần chuyển kỳ đã có deadline TL chốt. */
 	@Transactional
 	public boolean finalizeIfDone(UUID cycleId) {
+		UUID group = jdbc.sql("SELECT project_id FROM checkpoint_cycles WHERE id = :c").param("c", cycleId).query(UUID.class).optional().orElse(null);
+		if (group == null) return false;
+		WorkflowLocks.project(jdbc, group);
 		Object[] row = jdbc.sql("SELECT project_id, status, closes_at FROM checkpoint_cycles WHERE id = :c FOR UPDATE")
 				.param("c", cycleId).query((rs, i) -> new Object[] { J.uuid(rs, "project_id"), rs.getString("status"),
 						J.inst(rs, "closes_at") }).optional().orElse(null);

@@ -28,7 +28,7 @@ export function useSaveReport(groupId: string, cycleId: string) {
   })
 }
 
-/** S06 `Gửi báo cáo tuần` — Idempotency-Key BẮT BUỘC. */
+/** S06 luôn gửi Idempotency-Key để phát lại đúng kết quả khi mất phản hồi. */
 export function useSubmitReport(groupId: string, cycleId: string) {
   const queryClient = useQueryClient()
   return useIdempotentMutation<MyReportResponse, SubmitReportRequest>({
@@ -37,5 +37,6 @@ export function useSubmitReport(groupId: string, cycleId: string) {
       queryClient.setQueryData(reportKey(groupId, cycleId), data)
       invalidateTaskData(queryClient, groupId)
     },
+    onError: () => { void queryClient.invalidateQueries({ queryKey: reportKey(groupId, cycleId) }) },
   })
 }

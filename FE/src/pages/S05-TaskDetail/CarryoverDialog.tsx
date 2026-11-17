@@ -8,7 +8,7 @@ import { isApiError } from '@/api/errors'
 import { useGroup } from '@/app/group/groupContext'
 import { Button, FormField, InlineError, Input, Modal, Select, Textarea, useToast } from '@/components'
 import { useT, type MessageKey } from '@/i18n'
-import { zonedTimeToIso } from '@/lib/zonedTime'
+import { isoToZonedInput, zonedTimeToIso } from '@/lib/zonedTime'
 import styles from './TaskDetail.module.css'
 
 interface CarryoverValues {
@@ -34,6 +34,9 @@ export function CarryoverDialog({ task, onClose }: { task: TaskDetail; onClose: 
     .filter((cycle) => cycle.sequenceNo > source.cycle.sequenceNo && (cycle.status === 'SCHEDULED' || cycle.status === 'OPEN'))
     .sort((a, b) => a.sequenceNo - b.sequenceNo)
   const nextSequence = source.cycle.sequenceNo + 1
+  const proposed = task.carryoverProposal?.expectedCompletionAt
+  const proposedInput = isoToZonedInput(proposed, timeZone)
+  const proposedCycle = proposed ? candidates.find((cycle) => Date.parse(proposed) > Date.parse(cycle.periodStartAt) && Date.parse(proposed) <= Date.parse(cycle.closesAt)) : undefined
 
   const form = useForm<CarryoverValues>({
     resolver: zodResolver(
@@ -45,7 +48,7 @@ export function CarryoverDialog({ task, onClose }: { task: TaskDetail; onClose: 
         decisionReason: z.string().max(1000, t('taskDetail.carryover.errReason')),
       }),
     ),
-    defaultValues: { targetCycleId: '', deadlineDate: '', deadlineTime: '20:00', scopeNote: '', decisionReason: '' },
+    defaultValues: { targetCycleId: proposedCycle?.id ?? candidates[0]?.id ?? '', deadlineDate: proposedInput.date, deadlineTime: proposedInput.time || '20:00', scopeNote: '', decisionReason: '' },
     mode: 'onTouched',
   })
   const targetId = useWatch({ control: form.control, name: 'targetCycleId' })
@@ -66,6 +69,7 @@ export function CarryoverDialog({ task, onClose }: { task: TaskDetail; onClose: 
     }
     const body: CarryoverRequest & { roundId: string } = {
       roundId: source.id,
+      sourceReportItemId: proposed ? task.carryoverProposal?.reportItemId : undefined,
       targetCycleId: values.targetCycleId,
       deadline,
       scopeNote: values.scopeNote.trim() || null,
@@ -103,6 +107,7 @@ export function CarryoverDialog({ task, onClose }: { task: TaskDetail; onClose: 
         </>
       }
     >
+      {proposed ? <p>{t('workflow.proposed', { at: proposedInput.date + ' ' + proposedInput.time })} · {task.carryoverProposal?.note}</p> : null}
       <form id="carryover-form" noValidate onSubmit={(event) => void onSubmit(event)} className={styles.formStack}>
         {source.reason !== 'INITIAL' || task.carryoverReason ? (
           <p className={styles.muted}>

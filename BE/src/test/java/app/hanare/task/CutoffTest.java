@@ -26,8 +26,8 @@ class CutoffTest extends B1Base {
 		clock.set(Instant.parse("2026-11-19T10:00:00Z"));
 		submitResult(t1, w.a(), 201);
 		submitResult(t3, w.b(), 201);
-		// 4/5 báo cáo (A không phản hồi); B báo đủ, những người không có task gửi báo cáo rỗng
-		POST(reportUrl(w, w.c1().id()) + "/submit", w.b(), "{\"version\":null,\"items\":null}", 200);
+		// A thiếu báo cáo, B báo đủ: mẫu số nghĩa vụ là 2; report rỗng không đổi số liệu.
+		POST(reportUrl(w, w.c1().id()) + "/submit", w.b(), body("version",null,"items",List.of(J.o("taskId",t3.taskId(),"declaredResult","RESULT_SUBMITTED","riskLevel","ON_TRACK"))), 200);
 		for (var u : List.of(w.lead(), w.c(), w.d())) {
 			POST(reportUrl(w, w.c1().id()) + "/submit", u, "{\"version\":null,\"items\":[]}", 200);
 		}
@@ -57,7 +57,7 @@ class CutoffTest extends B1Base {
 		assertThat(ev.recipientIds()).containsExactly(w.lead().id());
 		assertThat(ev.dedupKey()).isEqualTo("checkpoint:" + w.c1().id() + ":review-required");
 		assertThat(ev.entityId()).isEqualTo(w.c1().id());
-		assertThat(ev.message()).contains("4/5").contains("2 task chờ bạn duyệt").contains("1 task chưa có kết quả");
+		assertThat(ev.message()).contains("1/2").contains("2 task chờ bạn duyệt").contains("1 task chưa có kết quả");
 		// job chạy lại: không tạo bản ghi/thông báo thứ hai
 		lifecycle.onCycleClosed(new app.hanare.schedule.CycleService.CycleRef(w.c1().id(), w.pid(), 1, null, w.c1().periodStart(),
 				w.c1().periodStart(), w.c1().closesAt().minusSeconds(25200), w.c1().closesAt(), "CLOSED", clock.instant(), null));
@@ -67,8 +67,8 @@ class CutoffTest extends B1Base {
 		String url = "/api/v1/groups/" + w.pid() + "/checkpoint-cycles/" + w.c1().id() + "/lead-summary";
 		GET(url, w.a(), 403);
 		MvcResult cur = GET(url, w.lead(), 200);
-		assertThat((Integer) at(cur, "$.members.total")).isEqualTo(5);
-		assertThat((Integer) at(cur, "$.members.reported")).isEqualTo(4);
+		assertThat((Integer) at(cur, "$.members.total")).isEqualTo(2);
+		assertThat((Integer) at(cur, "$.members.reported")).isEqualTo(1);
 		assertThat((Integer) at(cur, "$.members.notResponded")).isEqualTo(1);
 		assertThat((String) at(cur, "$.notRespondedMembers[0].name")).isEqualTo(w.a().name());
 		assertThat((Integer) at(cur, "$.tasks.total")).isEqualTo(3);
@@ -105,7 +105,7 @@ class CutoffTest extends B1Base {
 		closeCycle(w, w.c1());
 		assertThat(notes.of("CHECKPOINT_REVIEW_REQUIRED")).hasSize(1);
 		MvcResult s = GET("/api/v1/groups/" + w.pid() + "/checkpoint-cycles/" + w.c1().id() + "/lead-summary?view=AT_CUTOFF", w.lead(), 200);
-		assertThat((Integer) at(s, "$.members.reported")).isEqualTo(5);
+		assertThat((Integer) at(s, "$.members.reported")).isEqualTo(0);
 		assertThat((Integer) at(s, "$.members.notResponded")).isEqualTo(0);
 		assertThat(jdbc.sql("SELECT status FROM checkpoint_cycles WHERE id = :c").param("c", w.c1().id()).query(String.class).single()).isEqualTo("FINALIZED");
 	}

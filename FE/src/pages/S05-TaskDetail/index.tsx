@@ -8,6 +8,7 @@ import { ForbiddenState } from '@/app/ErrorPages'
 import { paths } from '@/app/routes'
 import {
   Card,
+  ButtonLink,
   InlineError,
   LoadingSkeleton,
   MetaList,
@@ -175,7 +176,8 @@ export default function S05TaskDetail() {
   const { groupId } = useGroup()
   const [params] = useSearchParams()
   const planId = params.get('planId')
-  const query = useTask(taskId)
+  const roundId = params.get('roundId')
+  const query = useTask(taskId, roundId)
   const [carryoverOpen, setCarryoverOpen] = useState(false)
   const task = query.data
 
@@ -224,7 +226,8 @@ export default function S05TaskDetail() {
       />
 
       <div className={styles.page}>
-        <InfoBlock task={task} />
+        {task.isHistorical ? <p>{t('workflow.historical')} · <ButtonLink to={paths.task(groupId, task.id)}>{t('workflow.current')}</ButtonLink></p> : null}
+      <InfoBlock task={task} />
         <ExecutionActions task={task} onCarryover={() => setCarryoverOpen(true)} />
         {allowed.has(TaskAction.REVIEW_RESULT) && reviewTarget ? <ReviewPanel key={reviewTarget.id} task={task} target={reviewTarget} /> : null}
         {allowed.has(TaskAction.DESIGNATE_REVIEWER) ? (

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { GroupRole, type MyReportResponse, type ReportItem } from '@/api/types'
@@ -41,6 +41,7 @@ const openItem: ReportItem = {
   taskId: 'task-2',
   roundId: 'round-2',
   title: 'Viết báo cáo',
+  canReportDifficulty: true,
   taskStatus: 'IN_PROGRESS',
   timeliness: 'NOT_DUE',
   timelinessLabel: 'Chưa đến hạn',
@@ -69,6 +70,42 @@ const setup = (extra: ApiRoute[], data = report()) => mockApi([...extra, ['GET',
 const itemOf = (title: string) => within(screen.getByRole('heading', { name: title }).closest('li') as HTMLElement)
 
 describe('S06 — Cập nhật checkpoint', () => {
+  it('nhập minh chứng và hạn dự kiến cùng kỳ, chỉ gửi một request báo cáo', async () => {
+    const api = setup([['POST', `${API}/submit`, report({ state: 'SUBMITTED', version: 1 })]], report({ items: [
+      { ...openItem, taskId: 'task-1', roundId: 'round-1', title: 'Thiết kế API', currentPlanRevisionId: 'plan-1', riskLevel: 'ON_TRACK', prefilled: true },
+      { ...openItem, currentPlanRevisionId: 'plan-2' },
+    ] }))
+    const user = userEvent.setup()
+    renderApp(PATH)
+    await screen.findByRole('heading', { name: 'Thiết kế API' })
+    await user.click(itemOf('Thiết kế API').getByRole('radio', { name: 'Hoàn thành · gửi TL duyệt' }))
+    await user.type(itemOf('Thiết kế API').getByLabelText(/Link sản phẩm/), 'https://example.test/result')
+    await user.click(itemOf('Viết báo cáo').getByRole('radio', { name: 'Có nguy cơ trễ' }))
+    await user.type(itemOf('Viết báo cáo').getByLabelText(/Tình hình \/ lý do chưa xong/), 'Cần dữ liệu thử nghiệm')
+    fireEvent.change(itemOf('Viết báo cáo').getByLabelText(/Ngày giờ dự kiến hoàn thành/), { target: { value: '2026-11-25' } })
+    fireEvent.change(itemOf('Viết báo cáo').getByLabelText('Giờ dự kiến'), { target: { value: '17:00' } })
+    await user.click(screen.getByRole('button', { name: 'Gửi báo cáo tuần' }))
+    await waitFor(() => expect(api.writes('POST', `${API}/submit`)).toHaveLength(1))
+    expect(api.writes('POST', `${API}/submit`)[0].body).toMatchObject({ items: [
+      { taskId: 'task-1', roundId: 'round-1', planRevisionId: 'plan-1', declaredResult: 'RESULT_SUBMITTED', evidence: [{ type: 'URL', url: 'https://example.test/result' }] },
+      { taskId: 'task-2', declaredResult: 'RESULT_MISSING', expectedCompletionAt: '2026-11-25T10:00:00.000Z' },
+    ] })
+    expect(api.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/submissions'))).toHaveLength(0)
+  })
+
+  it('chặn gửi khi thiếu ngày/lý do, vẫn cho lưu nháp và giữ dữ liệu đã nhập', async () => {
+    const api = setup([['PUT', API, report({ version: 0, state: 'DRAFT' })]], report({ items: [openItem] }))
+    const user = userEvent.setup()
+    renderApp(PATH)
+    await user.click(await screen.findByRole('radio', { name: 'Có nguy cơ trễ' }))
+    await user.type(screen.getByLabelText(/Tình hình \/ lý do chưa xong/), 'Giữ lại ghi chú này')
+    await user.click(screen.getByRole('button', { name: 'Gửi báo cáo tuần' }))
+    expect(screen.getByText('Nhập lý do và ngày giờ dự kiến để gửi báo cáo.')).toBeInTheDocument()
+    expect(api.writes('POST', `${API}/submit`)).toHaveLength(0)
+    await user.click(screen.getByRole('button', { name: 'Lưu nháp' }))
+    await waitFor(() => expect(api.writes('PUT', API)).toHaveLength(1))
+    expect(screen.getByLabelText(/Tình hình \/ lý do chưa xong/)).toHaveValue('Giữ lại ghi chú này')
+  })
   it('xác nhận hàng loạt task đã nộp + chọn nguy cơ + gửi: một request, có Idempotency-Key, quay lại màn gọi', async () => {
     const api = setup([['POST', `${API}/submit`, report({ state: 'SUBMITTED', submittedLabel: 'Đã gửi đầy đủ', version: 1 })]])
     const user = userEvent.setup()
@@ -77,12 +114,14 @@ describe('S06 — Cập nhật checkpoint', () => {
     expect(await screen.findByRole('dialog', { name: 'Cập nhật checkpoint' })).toBeInTheDocument()
     expect(await screen.findByText('Đã có phản hồi 0/2 task')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'PR #7' })).toHaveAttribute('href', 'https://github.com/x/y/pull/7')
-    expect(screen.getByText(/chưa phải TL đã chấp nhận/)).toBeInTheDocument()
+    expect(itemOf('Thiết kế API').getByText('Đã nộp · chờ TL duyệt')).toBeInTheDocument()
+    expect(itemOf('Thiết kế API').getByRole('radio', { name: 'Cần TL hỗ trợ' })).toBeDisabled()
 
     await user.click(screen.getByRole('button', { name: 'Xác nhận 1 task đã nộp kết quả' }))
     expect(screen.getByText('Đã có phản hồi 1/2 task')).toBeInTheDocument()
     await user.click(itemOf('Viết báo cáo').getByRole('radio', { name: 'Có nguy cơ trễ' }))
-    await user.type(itemOf('Viết báo cáo').getByLabelText('Tiến độ / trở ngại'), 'Còn thiếu dữ liệu')
+    await user.type(itemOf('Viết báo cáo').getByLabelText(/Tình hình \/ lý do chưa xong/), 'Còn thiếu dữ liệu')
+    fireEvent.change(itemOf('Viết báo cáo').getByLabelText(/Ngày giờ dự kiến hoàn thành/), { target: { value: '2026-11-25' } })
     await user.click(screen.getByRole('button', { name: 'Gửi báo cáo tuần' }))
 
     await waitFor(() => expect(api.writes('POST', `${API}/submit`)).toHaveLength(1))
@@ -111,11 +150,12 @@ describe('S06 — Cập nhật checkpoint', () => {
     await user.click(screen.getByRole('button', { name: 'Xác nhận 1 task đã nộp kết quả' }))
     await user.click(itemOf('Viết báo cáo').getByRole('radio', { name: 'Cần TL hỗ trợ' }))
     expect(itemOf('Viết báo cáo').getByRole('link', { name: 'Gửi đề nghị riêng cho TL' })).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks/task-2/difficulty`)
-    await user.type(itemOf('Viết báo cáo').getByLabelText('Tiến độ / trở ngại'), 'Kẹt DB')
+    await user.type(itemOf('Viết báo cáo').getByLabelText(/Tình hình \/ lý do chưa xong/), 'Kẹt DB')
+    fireEvent.change(itemOf('Viết báo cáo').getByLabelText(/Ngày giờ dự kiến hoàn thành/), { target: { value: '2026-11-25' } })
     await user.click(screen.getByRole('button', { name: 'Gửi báo cáo tuần' }))
 
     expect(await screen.findByText('Task này còn thiếu')).toBeInTheDocument()
-    expect(itemOf('Viết báo cáo').getByLabelText('Tiến độ / trở ngại')).toHaveValue('Kẹt DB')
+    expect(itemOf('Viết báo cáo').getByLabelText(/Tình hình \/ lý do chưa xong/)).toHaveValue('Kẹt DB')
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 

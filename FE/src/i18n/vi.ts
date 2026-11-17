@@ -177,6 +177,7 @@ export const vi = {
     },
     /** `PlanStatus` */
     plan: {
+      CANCELLED: 'Đã hủy đề xuất',
       DRAFT: 'Bản nháp',
       PENDING_APPROVAL: 'Chờ TL duyệt',
       CHANGES_REQUESTED: 'Cần chỉnh sửa kế hoạch',
@@ -1538,6 +1539,26 @@ export const vi = {
     cancelTitle: 'Đóng yêu cầu hỗ trợ?',
     cancelDescription: 'Các đề nghị đang chờ sẽ được thông báo lịch sự là chưa được chọn. Điểm của task được giải phóng về người gốc.',
     cancelled: 'Đã đóng yêu cầu',
+  },
+  workflow: {
+    create: 'Thêm task nháp', draftSaved: 'Đã lưu task nháp', saveDraft: 'Lưu nháp',
+    batch: 'Chốt và gửi {count} kế hoạch', select: 'Chọn kế hoạch {title}', cancelRevision: 'Hủy đề xuất',
+    completion: 'Tiến độ công việc', all: 'Tất cả', done: 'Đã hoàn thành', unfinished: 'Chưa hoàn thành', overdue: 'Đang trễ',
+    missed: 'Trễ {count} kỳ', carried: 'Đã chuyển kỳ', historical: 'Đang xem vòng lịch sử', current: 'Về vòng hiện tại',
+    evidenceRequired: 'Nhập ít nhất một link sản phẩm HTTPS.',
+    evidence: 'Link sản phẩm / minh chứng', evidenceHint: 'Mỗi dòng một URL HTTPS, tối đa 5 link. Chỉ tạo bản nộp khi gửi báo cáo.',
+    resultNote: 'Ghi chú kết quả', missing: 'Chưa hoàn thành', result: 'Hoàn thành · gửi TL duyệt',
+    expectedTime: 'Giờ dự kiến',
+    expected: 'Ngày giờ dự kiến hoàn thành', inTime: 'Dự kiến trong hạn', extension: 'Đề xuất hạn mới', reason: 'Tình hình / lý do chưa xong',
+    required: 'Nhập lý do và ngày giờ dự kiến để gửi báo cáo.', invalidDate: 'Ngày giờ dự kiến không hợp lệ.',
+    accepted: 'Hoàn thành · đã duyệt', pending: 'Đã nộp · chờ TL duyệt', update: 'Cập nhật báo cáo',
+    helper: 'Mở công việc hỗ trợ', proposed: 'Đề xuất: {at}', reportMissing: 'Chưa gửi báo cáo',
+    reviewAndCarry: 'Yêu cầu sửa và chuyển kỳ', targetCycle: 'Kỳ xử lý tiếp', deadline: 'Hạn xử lý tiếp',
+    confirmRework: 'Bạn có thể lưu yêu cầu sửa trước, hoặc chốt luôn hạn xử lý tiếp.',
+    noNext: 'Chưa có kỳ đích hợp lệ. Tải lại lịch hoặc thống nhất lại hạn/phạm vi dự án.',
+    cyclesMore: 'Tải thêm kỳ',
+    difficultyLocked: 'Task hiện không cho phép gửi đề nghị hỗ trợ riêng. Hãy kiểm tra trạng thái và kỳ xử lý hiện tại.',
+    planUnknown: 'Báo cáo cũ chưa lưu phiên bản kế hoạch, nên chưa thể đối chiếu đầy đủ cam kết tại lần gửi này.',
   },
 } as const
 

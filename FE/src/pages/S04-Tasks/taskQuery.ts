@@ -16,6 +16,7 @@ export interface TaskFilters {
   assigneeId: string
   planStatus: string
   taskStatus: string
+  completion?: string
   difficulty: string
   q: string
   from: string
@@ -34,6 +35,7 @@ export function parseFilters(params: URLSearchParams): TaskFilters {
     assigneeId: params.get('assignee') ?? '',
     planStatus: oneOf(PlanStatus, params.get('plan')),
     taskStatus: oneOf(TaskStatus, params.get('status')),
+    completion: ['DONE','UNFINISHED','OVERDUE'].includes(params.get('completion') ?? '') ? params.get('completion')! : '',
     difficulty: oneOf(Difficulty, params.get('difficulty')),
     q: params.get('q') ?? '',
     from: params.get('from') ?? '',
@@ -49,6 +51,7 @@ export function filtersToParams(filters: TaskFilters): URLSearchParams {
   if (filters.assigneeId) params.set('assignee', filters.assigneeId)
   if (filters.planStatus) params.set('plan', filters.planStatus)
   if (filters.taskStatus) params.set('status', filters.taskStatus)
+  if (filters.completion) params.set('completion', filters.completion)
   if (filters.difficulty) params.set('difficulty', filters.difficulty)
   if (filters.q.trim()) params.set('q', filters.q.trim())
   if (filters.from) params.set('from', filters.from)
@@ -59,7 +62,7 @@ export function filtersToParams(filters: TaskFilters): URLSearchParams {
 
 /** Số bộ lọc đang bật (không tính tab và trang). */
 export function activeFilterCount(filters: TaskFilters): number {
-  return [filters.cycleId, filters.assigneeId, filters.planStatus, filters.taskStatus, filters.difficulty, filters.q.trim(), filters.from, filters.to].filter(
+  return [filters.completion, filters.cycleId, filters.assigneeId, filters.planStatus, filters.taskStatus, filters.difficulty, filters.q.trim(), filters.from, filters.to].filter(
     Boolean,
   ).length
 }
@@ -67,6 +70,7 @@ export function activeFilterCount(filters: TaskFilters): number {
 /** Đổi bộ lọc thành query của `GET /groups/{id}/tasks`. Ngày deadline (múi giờ nhóm) → UTC ISO. */
 export function toListQuery(filters: TaskFilters, timeZone: string): ListTasksQuery {
   const query: ListTasksQuery = { tab: filters.tab, page: filters.page, size: PAGE_SIZE }
+  if (filters.completion) query.completion = filters.completion as ListTasksQuery['completion']
   if (filters.cycleId) query.cycleId = filters.cycleId
   if (filters.assigneeId) query.assigneeId = filters.assigneeId
   if (filters.planStatus) query.planStatus = filters.planStatus as PlanStatus
