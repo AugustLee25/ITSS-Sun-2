@@ -107,6 +107,17 @@ public class TaskReader {
 		return load(roundId).orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND, "Không tìm thấy vòng xử lý."));
 	}
 
+	/** Keep frozen plan/submission references; reviews are the later decision on that submission. */
+	public Ctx atCutoff(Ctx c, UUID cycleId) {
+		UUID[] refs = jdbc.sql("SELECT approved_plan_id, submission_id_at_cutoff FROM checkpoint_task_snapshots WHERE cycle_id=:c AND round_id=:r AND frozen_at IS NOT NULL")
+				.param("c",cycleId).param("r",c.round().id()).query((rs,i)->new UUID[]{J.uuid(rs,"approved_plan_id"),J.uuid(rs,"submission_id_at_cutoff")}).optional().orElse(null);
+		if(refs==null) return c;
+		Plan p=plan(refs[0]).orElseThrow(); Sub sub=refs[1]==null?null:submission(refs[1]).orElseThrow(); Round r=c.round();
+		Round frozen=new Round(r.id(),r.taskId(),r.projectId(),r.roundNo(),cycleId,r.previousRoundId(),r.reason(),r.state(),p.id(),
+				r.acceptedSubmissionId(),r.completedAt(),r.acceptedAt(),r.startedAt(),r.workStartedAt(),r.closedAt(),r.taskVersion(),r.taskCreatedBy(),r.taskCreatedAt(),r.independentApproverId());
+		return new Ctx(frozen,p,null,sub,sub==null?null:reviewOf(sub.id()).orElse(null),c.originalAssignee(),c.originalDeadline());
+	}
+
 	public Map<UUID, Ctx> loadAll(Collection<UUID> roundIds) {
 		Map<UUID, Ctx> out = new LinkedHashMap<>();
 		if (roundIds.isEmpty()) {
@@ -136,7 +147,7 @@ public class TaskReader {
 		Map<UUID, Plan> effective = new HashMap<>();
 		Map<UUID, Plan> open = new HashMap<>();
 		jdbc.sql("SELECT " + PLAN_COLS + ", r.effective_plan_id AS eff FROM task_plan_revisions p JOIN task_review_rounds r ON r.id = p.round_id"
-				+ " WHERE r.id IN (:ids) AND (p.status <> 'APPROVED' OR p.id = r.effective_plan_id)")
+				+ " WHERE r.id IN (:ids) AND (p.status IN ('DRAFT','PENDING_APPROVAL','CHANGES_REQUESTED') OR p.id = r.effective_plan_id)")
 				.param("ids", rounds.keySet()).query((rs, i) -> {
 					Plan p = PLAN_MAPPER.mapRow(rs, i);
 					if ("APPROVED".equals(p.status())) {
@@ -156,6 +167,9 @@ public class TaskReader {
 					return 0;
 				}).list();
 		Map<UUID, Rev> revs = new HashMap<>();
+		for(Round r:rounds.values()) if(r.acceptedSubmissionId()!=null) {
+			Sub accepted=submission(r.acceptedSubmissionId()).orElseThrow(); subs.put(r.id(),accepted);
+		}
 		if (!subs.isEmpty()) {
 			jdbc.sql("""
 					SELECT id, submission_id, decision, reviewer_id, issue_description, reviewed_at

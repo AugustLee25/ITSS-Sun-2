@@ -43,6 +43,9 @@ public class TaskService {
 	public record VersionedRequest(Long version) {
 	}
 
+	public record PlanBatchItem(UUID planId, Long version) { }
+	public record PlanBatchRequest(List<PlanBatchItem> items) { }
+
 	public record ReviewPlanRequest(String decision, String note, Long version) {
 	}
 
@@ -62,9 +65,10 @@ public class TaskService {
 	private final TaskViews views;
 	private final Ops ops;
 	private final CycleLifecycle lifecycle;
+	private final WorkflowRequests requests;
 
 	public TaskService(JdbcClient jdbc, GroupAccess access, Scope.Factory scopes, TaskReader reader, TaskViews views, Ops ops,
-			CycleLifecycle lifecycle) {
+			CycleLifecycle lifecycle, WorkflowRequests requests) {
 		this.jdbc = jdbc;
 		this.access = access;
 		this.scopes = scopes;
@@ -72,6 +76,7 @@ public class TaskService {
 		this.views = views;
 		this.ops = ops;
 		this.lifecycle = lifecycle;
+		this.requests = requests;
 	}
 
 	// ------------------------------------------------------------------ quy tắc dùng chung
@@ -118,7 +123,27 @@ public class TaskService {
 		Scope s = scopes.of(projectId);
 		Viewer v = viewer(m);
 		String tab = q.getOrDefault("tab", "ALL");
-		List<Ctx> ctxs = new ArrayList<>(reader.loadAll(reader.currentRoundIds(projectId)).values());
+		if(q.get("cycleId")!=null) {
+			UUID cycle;
+			try { cycle=UUID.fromString(q.get("cycleId")); }
+			catch(IllegalArgumentException ex) { throw ApiException.validation("cycleId","Kỳ không hợp lệ."); }
+			s.cycle(cycle);
+		}
+		if(q.get("completion")!=null && !List.of("DONE","UNFINISHED","OVERDUE").contains(q.get("completion")))
+			throw ApiException.validation("completion","Bộ lọc tiến độ không hợp lệ.");
+		List<UUID> ids = q.get("cycleId") == null ? reader.currentRoundIds(projectId)
+				: jdbc.sql("SELECT id FROM task_review_rounds WHERE project_id = :p AND cycle_id = :c ORDER BY round_no")
+					.param("p", projectId).param("c", UUID.fromString(q.get("cycleId"))).query(UUID.class).list();
+		if(q.get("cycleId")!=null && jdbc.sql("SELECT EXISTS(SELECT 1 FROM checkpoint_cycle_summaries WHERE cycle_id=:c)")
+				.param("c",UUID.fromString(q.get("cycleId"))).query(Boolean.class).single()) {
+			ids=jdbc.sql("SELECT round_id FROM checkpoint_task_snapshots WHERE project_id=:p AND cycle_id=:c AND frozen_at IS NOT NULL")
+					.param("p",projectId).param("c",UUID.fromString(q.get("cycleId"))).query(UUID.class).list();
+		}
+		List<Ctx> ctxs = new ArrayList<>(reader.loadAll(ids).values());
+		if(q.get("cycleId")!=null) {
+			UUID cycle=UUID.fromString(q.get("cycleId"));
+			ctxs=ctxs.stream().map(c->reader.atCutoff(c,cycle)).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+		}
 		List<Map<String, Object>> all = new ArrayList<>(views.summaries(s, ctxs, v));
 		List<Map<String, Object>> out = new ArrayList<>();
 		for (Map<String, Object> t : all) {
@@ -152,6 +177,10 @@ public class TaskService {
 	@SuppressWarnings("unchecked")
 	private boolean matches(Map<String, Object> t, String tab, Viewer v, Map<String, String> q) {
 		String status = (String) t.get("taskStatus");
+		String completion = q.get("completion");
+		if ("DONE".equals(completion) && !"DONE".equals(status)) return false;
+		if ("UNFINISHED".equals(completion) && (!Boolean.TRUE.equals(t.get("committed")) || "DONE".equals(status))) return false;
+		if ("OVERDUE".equals(completion) && !Boolean.TRUE.equals(t.get("currentlyOverdue"))) return false;
 		String risk = (String) t.get("riskStatus");
 		Map<String, Object> exec = (Map<String, Object>) t.get("currentExecutor");
 		String pending = (String) t.get("pendingRevisionStatus");
@@ -213,16 +242,19 @@ public class TaskService {
 	// ------------------------------------------------------------------ POST /groups/{g}/tasks
 	@Transactional
 	public Map<String, Object> create(UUID projectId, CurrentUser user, CreateTaskRequest r) {
-		access.requireLeader(projectId, user);
-		J.Check ck = J.check().len(r.title(), "title", 3, 120).len(r.description(), "description", 1, 4000)
-				.len(r.expectedOutput(), "expectedOutput", 1, 2000).require(r.assigneeId() != null, "assigneeId", "Bắt buộc")
-				.require(r.cycleId() != null, "cycleId", "Bắt buộc").require(r.startAt() != null, "startAt", "Bắt buộc")
-				.require(r.deadline() != null, "deadline", "Bắt buộc");
-		requireDifficulty(ck, "difficulty", r.difficulty());
+		GroupMembership member = access.requireMember(projectId, user);
+		WorkflowLocks.project(jdbc, projectId);
+		UUID assignee = r.assigneeId() == null && !member.isLeader() ? user.id() : r.assigneeId();
+		if (!member.isLeader() && !user.id().equals(assignee)) throw ApiException.of(ErrorCode.NOT_ASSIGNEE, "Chỉ tạo nháp cho chính mình.");
+		J.Check ck = J.check().len(r.title(), "title", 3, 120).require(assignee != null, "assigneeId", "Bắt buộc")
+				.require(r.cycleId() != null, "cycleId", "Bắt buộc");
+		if (r.description() != null) ck.len(r.description(), "description", 0, 4000);
+		if (r.expectedOutput() != null) ck.len(r.expectedOutput(), "expectedOutput", 0, 2000);
+		if (r.difficulty() != null) requireDifficulty(ck, "difficulty", r.difficulty());
 		ck.done();
 		Scope s = scopes.of(projectId);
 		CycleRow cycle = s.cycle(r.cycleId());
-		checkPlanTimes(s, cycle, r.startAt(), r.deadline(), r.assigneeId(), true);
+		checkPlanTimes(s, cycle, r.startAt(), r.deadline(), assignee, true);
 		Instant now = ops.now();
 		UUID taskId = jdbc.sql("INSERT INTO tasks (project_id, created_by, created_at) VALUES (:p, :u, :at) RETURNING id")
 				.param("p", projectId).param("u", user.id()).param("at", DbTime.toDb(now)).query(UUID.class).single();
@@ -236,27 +268,35 @@ public class TaskService {
 				    description, expected_output, start_at, deadline, difficulty, status, created_by, approval_source,
 				    created_at, updated_at)
 				VALUES (:p, :r, 1, :c, :a, :title, :d, :o, :s, :dl, :df, 'DRAFT', :u, 'MEMBER_PLAN', :at, :at) RETURNING id
-				""").param("p", projectId).param("r", roundId).param("c", cycle.id()).param("a", r.assigneeId())
-				.param("title", r.title().strip()).param("d", r.description().strip()).param("o", r.expectedOutput().strip())
+				""").param("p", projectId).param("r", roundId).param("c", cycle.id()).param("a", assignee)
+				.param("title", r.title().strip()).param("d", r.description() == null ? null : r.description().strip())
+				.param("o", r.expectedOutput() == null ? null : r.expectedOutput().strip())
 				.param("s", DbTime.toDb(r.startAt())).param("dl", DbTime.toDb(r.deadline())).param("df", r.difficulty())
 				.param("u", user.id()).param("at", DbTime.toDb(now)).query(UUID.class).single();
 		ops.history(projectId, user.id(), taskId, "TASK_CREATED", 1, s.name(user.id()) + " giao task \"" + r.title().strip()
-				+ "\" cho " + s.name(r.assigneeId()), planId);
+				+ "\" cho " + s.name(assignee), planId);
 		ops.notify(projectId, "TASK_ASSIGNED", "TASK", taskId, cycle.id(), "task:" + taskId + ":assigned",
-				List.of(r.assigneeId()), user.id(), "Bạn được giao task mới",
+				List.of(assignee), user.id(), "Bạn được giao task mới",
 				"Task \"" + r.title().strip() + "\" đã được giao cho bạn. Hãy lập kế hoạch và gửi TL duyệt.",
 				J.o("taskId", taskId, "groupId", projectId, "planId", planId));
 		Ctx c = reader.require(roundId);
-		return views.detail(s, c, new Viewer(user.id(), "LEAD"));
+		return views.detail(s, c, viewer(member));
 	}
 
 	// ------------------------------------------------------------------ GET /tasks/{id}
 	@Transactional(readOnly = true)
 	public Map<String, Object> get(UUID taskId, CurrentUser user) {
+		return get(taskId, null, user);
+	}
+
+	@Transactional(readOnly = true)
+	public Map<String, Object> get(UUID taskId, UUID roundId, CurrentUser user) {
 		UUID projectId = reader.projectOfTask(taskId).orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND, "Không tìm thấy task."));
 		GroupMembership m = access.requireMember(projectId, user);
 		Scope s = scopes.of(projectId);
-		Ctx c = reader.require(reader.currentRoundOf(taskId).orElseThrow());
+		Ctx c = reader.require(roundId == null ? reader.currentRoundOf(taskId).orElseThrow() : roundId);
+		if (!c.round().taskId().equals(taskId)) throw ApiException.of(ErrorCode.NOT_FOUND, "Vòng không thuộc task.");
+		c=reader.atCutoff(c,c.round().cycleId());
 		return views.detail(s, c, viewer(m));
 	}
 
@@ -318,6 +358,7 @@ public class TaskService {
 	@Transactional
 	public Map<String, Object> updatePlan(UUID planId, CurrentUser user, UpdatePlanRequest r) {
 		PlanCtx pc = loadPlan(planId, user);
+		TaskWritePolicy.requirePlanEdit(jdbc, pc.scope(), pc.ctx());
 		Plan p = pc.plan();
 		Scope s = pc.scope();
 		boolean lead = pc.member().isLeader();
@@ -379,6 +420,7 @@ public class TaskService {
 	@Transactional
 	public Map<String, Object> submitPlan(UUID planId, CurrentUser user, VersionedRequest r) {
 		PlanCtx pc = loadPlan(planId, user);
+		TaskWritePolicy.requirePlanEdit(jdbc, pc.scope(), pc.ctx());
 		Plan p = pc.plan();
 		Scope s = pc.scope();
 		if (!user.id().equals(p.assigneeId())) {
@@ -444,8 +486,56 @@ public class TaskService {
 	}
 
 	@Transactional
+	public Map<String, Object> submitBatch(UUID projectId, CurrentUser user, PlanBatchRequest request) {
+		return submitBatch(projectId, user, request, null);
+	}
+
+	@Transactional
+	public Map<String, Object> submitBatch(UUID projectId, CurrentUser user, PlanBatchRequest request, String key) {
+		access.requireMember(projectId, user);
+		WorkflowLocks.project(jdbc, projectId);
+		String operation = "plans-submit:" + projectId;
+		Map<String, Object> saved = requests.replay(user.id(), operation, key, request);
+		if (saved != null) return saved;
+		if (request.items() == null || request.items().isEmpty() || request.items().size() > 100)
+			throw ApiException.validation("items", "Chọn từ 1 đến 100 kế hoạch.");
+		java.util.Set<UUID> seen = new java.util.HashSet<>();
+		List<Map<String, Object>> results = new ArrayList<>();
+		for (int i = 0; i < request.items().size(); i++) {
+			PlanBatchItem item = request.items().get(i);
+			if (item == null || item.planId() == null || !seen.add(item.planId()))
+				throw ApiException.validation("items[" + i + "].planId", "Kế hoạch thiếu hoặc trùng.");
+			Plan plan = reader.plan(item.planId()).orElseThrow(() -> ApiException.notFound("Không tìm thấy kế hoạch."));
+			if (!reader.require(plan.roundId()).round().projectId().equals(projectId)) throw ApiException.notFound("Kế hoạch không thuộc nhóm.");
+			try { results.add(submitPlan(item.planId(), user, new VersionedRequest(item.version()))); }
+			catch (ApiException e) { throw new ApiException(e.status(), e.code(), e.getMessage(),
+					List.of(new ApiError.FieldError("items[" + i + "]", e.getMessage()))); }
+		}
+		Map<String, Object> response = J.o("items", results);
+		requests.save(projectId, user.id(), operation, key, request, response);
+		return response;
+	}
+
+	@Transactional
+	public Map<String, Object> cancelRevision(UUID planId, CurrentUser user, VersionedRequest request) {
+		PlanCtx pc = loadPlan(planId, user);
+		TaskWritePolicy.requirePlanEdit(jdbc, pc.scope(), pc.ctx());
+		Plan plan = pc.plan();
+		if (!user.id().equals(plan.createdBy()) && !user.id().equals(pc.ctx().executor())) throw ApiException.of(ErrorCode.NOT_ASSIGNEE, null);
+		if (plan.baseRevisionId() == null || "APPROVED".equals(plan.status()) || "CANCELLED".equals(plan.status()))
+			throw ApiException.invalidState("Chỉ hủy đề xuất thay đổi chưa được duyệt.");
+		version(request.version(), plan.version());
+		jdbc.sql("UPDATE task_plan_revisions SET status = 'CANCELLED', version = version + 1, updated_at = :at WHERE id = :p")
+				.param("p", planId).param("at", DbTime.toDb(ops.now())).update();
+		ops.audit(pc.scope().projectId(), user.id(), "PLAN_REVISION", planId, "PLAN_CANCELLED", null, J.o("status", "CANCELLED"));
+		ops.bumpTask(pc.ctx().round().taskId());
+		return mutation(pc, planId);
+	}
+
+	@Transactional
 	public Map<String, Object> withdrawPlan(UUID planId, CurrentUser user, VersionedRequest r) {
 		PlanCtx pc = loadPlan(planId, user);
+		TaskWritePolicy.requirePlanEdit(jdbc, pc.scope(), pc.ctx());
 		Plan p = pc.plan();
 		Scope s = pc.scope();
 		if (!user.id().equals(p.submittedBy())) {
@@ -487,12 +577,20 @@ public class TaskService {
 		}
 		version(r.version(), p.version());
 		Ctx c = pc.ctx();
+		TaskWritePolicy.requirePlanEdit(jdbc, s, c);
+		if (c.committed() && !Objects.equals(c.executor(), p.assigneeId())) {
+			throw ApiException.validation("assigneeId", "Đổi người thực hiện phải qua bàn giao được người nhận xác nhận.");
+		}
 		if (p.baseRevisionId() != null && !p.baseRevisionId().equals(c.round().effectivePlanId())) {
 			throw ApiException.versionConflict();
 		}
 		Instant now = ops.now();
 		if ("APPROVED".equals(r.decision())) {
 			CycleRow target = s.cycle(p.proposedCycleId());
+			checkPlanTimes(s, target, p.startAt(), p.deadline(), p.assigneeId(), true);
+			if(!target.id().equals(c.round().cycleId()))
+				jdbc.sql("DELETE FROM checkpoint_report_items i USING checkpoint_reports rep WHERE i.report_id=rep.id AND i.round_id=:r AND rep.status='DRAFT'")
+						.param("r",c.round().id()).update();
 			if (target.isClosed(now)) {
 				throw ApiException.of(HttpStatus.CONFLICT, "CYCLE_CLOSED", "Kỳ của kế hoạch đã đóng, không thể duyệt vào kỳ này.");
 			}
@@ -536,6 +634,7 @@ public class TaskService {
 		ops.lockRound(roundId);
 		Ctx c = reader.require(roundId);
 		Scope s = scopes.of(projectId);
+		TaskWritePolicy.requireExecution(jdbc, s, c);
 		if (!user.id().equals(c.executor())) {
 			throw ApiException.of(ErrorCode.NOT_ASSIGNEE, null);
 		}
@@ -571,6 +670,7 @@ public class TaskService {
 		String out = r.expectedOutput() != null ? r.expectedOutput().strip() : eff.expectedOutput();
 		UUID cycleId = r.cycleId() != null ? r.cycleId() : eff.proposedCycleId();
 		UUID assignee = r.assigneeId() != null ? r.assigneeId() : eff.assigneeId();
+		if (!assignee.equals(eff.assigneeId())) throw ApiException.validation("assigneeId", "Đổi người thực hiện phải qua bàn giao được người nhận xác nhận.");
 		Instant start = r.startAt() != null ? r.startAt() : eff.startAt();
 		Instant deadline = r.deadline() != null ? r.deadline() : eff.deadline();
 		String diff = r.difficulty() != null ? r.difficulty() : eff.difficulty();
@@ -618,6 +718,7 @@ public class TaskService {
 		ops.lockRound(roundId);
 		Ctx c = reader.require(roundId);
 		Scope s = scopes.of(projectId);
+		TaskWritePolicy.requireExecution(jdbc, s, c);
 		if (!user.id().equals(c.executor())) {
 			throw ApiException.of(ErrorCode.NOT_ASSIGNEE, null);
 		}
@@ -649,6 +750,7 @@ public class TaskService {
 		ops.lockRound(roundId);
 		Ctx c = reader.require(roundId);
 		Scope s = scopes.of(projectId);
+		TaskWritePolicy.requireExecution(jdbc, s, c);
 		if (!user.id().equals(c.executor())) {
 			throw ApiException.of(ErrorCode.NOT_ASSIGNEE, null);
 		}

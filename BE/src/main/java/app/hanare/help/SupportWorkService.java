@@ -46,6 +46,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SupportWorkService {
 
+	private final app.hanare.task.SubmissionWriter writer;
+	private final app.hanare.task.WorkflowRequests requests;
 	private final JdbcClient jdbc;
 	private final GroupAccess access;
 	private final Lookups lookups;
@@ -60,7 +62,9 @@ public class SupportWorkService {
 
 	public SupportWorkService(JdbcClient jdbc, GroupAccess access, Lookups lookups, TaskReader tasks, HelpViews views,
 			EvidenceViews evidence, HandoffService handoff, HelpNotices notices, AuditWriter audit,
-			NotificationService notifications, Clock clock) {
+			NotificationService notifications, Clock clock, app.hanare.task.SubmissionWriter writer, app.hanare.task.WorkflowRequests requests) {
+		this.writer = writer;
+		this.requests = requests;
 		this.jdbc = jdbc;
 		this.access = access;
 		this.lookups = lookups;
@@ -80,6 +84,7 @@ public class SupportWorkService {
 	public SupportWorkDto get(UUID workId, CurrentUser user) {
 		Work w0 = views.work(workId);
 		access.requireMember(w0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, w0.projectId());
 		Req r = views.req(w0.helpRequestId());
 		boolean allowed = user.id().equals(w0.helperId()) || user.id().equals(r.createdBy())
 				|| user.id().equals(r.beneficiaryId()) || user.id().equals(w0.approverId());
@@ -95,51 +100,45 @@ public class SupportWorkService {
 	@Transactional
 	public SubmitSupportResultResponse submit(UUID workId, CurrentUser user, String idempotencyKey,
 			SubmitSupportResultRequest req) {
-		IdempotencyKey.require(idempotencyKey);
+		return submitInternal(workId, user, idempotencyKey, req, false);
+	}
+
+	@Transactional
+	public SubmitSupportResultResponse submitForReport(UUID workId, CurrentUser user, SubmitSupportResultRequest req) {
+		return submitInternal(workId, user, null, req, true);
+	}
+
+	private SubmitSupportResultResponse submitInternal(UUID workId, CurrentUser user, String idempotencyKey, SubmitSupportResultRequest req, boolean fromReport) {
+		if (!fromReport) IdempotencyKey.require(idempotencyKey);
 		Work w0 = views.work(workId);
 		access.requireMember(w0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, w0.projectId());
 		if (!user.id().equals(w0.helperId())) {
 			throw ApiException.forbidden("Chỉ người được chọn hỗ trợ mới nộp được kết quả.");
 		}
-		List<EvidenceInput> input = req.evidence() == null ? List.of() : req.evidence();
-		if (input.isEmpty()) {
-			throw Err.unprocessable("EVIDENCE_REQUIRED", "Cần ít nhất một minh chứng (liên kết kết quả).");
-		}
-		if (input.size() > 5) {
-			throw ApiException.validation("evidence", "Tối đa 5 minh chứng.");
-		}
-		List<EvidenceItem> items = new ArrayList<>();
-		for (int i = 0; i < input.size(); i++) {
-			String url = input.get(i).url() == null ? "" : input.get(i).url().trim();
-			if (!(url.startsWith("https://") || url.startsWith("http://")) || url.length() > 2048) {
-				throw ApiException.validation("evidence[" + i + "].url", "Minh chứng phải là liên kết http(s) hợp lệ.");
-			}
-			items.add(new EvidenceItem("URL", url, input.get(i).label()));
-		}
+		SubmitSupportResultResponse replay = requests.replayAs(user.id(), "support-submit:" + workId, idempotencyKey, req, SubmitSupportResultResponse.class);
+		if (replay != null) return replay;
+		List<app.hanare.task.ResultService.EvidenceInput> input = req.evidence() == null ? List.of() : req.evidence().stream()
+				.map(e -> e == null ? null : new app.hanare.task.ResultService.EvidenceInput(e.type(), e.url(), e.label())).toList();
+		app.hanare.task.ResultService.validateEvidence(new app.hanare.task.ResultService.SubmitResultRequest(null, req.resultNote(), input));
+		List<EvidenceItem> items = input.stream().map(e -> new EvidenceItem("URL", e.url().strip(), e.label())).toList();
 		if (req.actualMinutes() != null && req.actualMinutes() <= 0) {
 			throw ApiException.validation("actualMinutes", "Phải là số dương.");
 		}
 		syncWork(workId);
 		Work w = views.workForUpdate(workId);
 		Req r = views.req(w.helpRequestId());
-		SubmitCheck check = views.submitCheck(w, r);
+		SubmitCheck check = views.submitCheck(w, r, fromReport);
 		if (!check.ok()) {
 			throw Err.conflict(check.reason().code(), check.reason().message());
 		}
 		TaskFacts f = tasks.facts(w.projectId(), r.taskId()).orElseThrow();
 		Instant now = clock.instant();
-		int taskNo = jdbc.sql("SELECT COALESCE(MAX(submission_no), 0) + 1 FROM task_submissions WHERE round_id = :r")
-				.param("r", f.roundId()).query(Integer.class).single();
+		app.hanare.task.TaskReader.Sub taskSub = writer.write(f.roundId(), user,
+				new app.hanare.task.ResultService.SubmitResultRequest(f.effectivePlanId(), req.resultNote(), input), fromReport);
+		UUID taskSubmissionId = taskSub.id();
+		now = taskSub.submittedAt();
 		String evJson = evidence.toJson(items);
-		UUID taskSubmissionId = jdbc.sql("""
-				INSERT INTO task_submissions (project_id, round_id, plan_revision_id, submission_no, submitted_by, result_note,
-				    evidence, submitted_at)
-				VALUES (:p, :r, :plan, :n, :by, :note, CAST(:ev AS jsonb), :at) RETURNING id
-				""").param("p", w.projectId()).param("r", f.roundId()).param("plan", f.effectivePlanId()).param("n", taskNo)
-				.param("by", user.id()).param("note", req.resultNote().trim()).param("ev", evJson).param("at", DbTime.toDb(now))
-				.query(UUID.class).single();
-		jdbc.sql("UPDATE task_review_rounds SET state = 'AWAITING_REVIEW', version = version + 1 WHERE id = :r AND state = 'ACTIVE'")
-				.param("r", f.roundId()).update();
 		int revisionNo = jdbc.sql("SELECT COALESCE(MAX(revision_no), 0) + 1 FROM support_submissions WHERE work_id = :w")
 				.param("w", workId).query(Integer.class).single();
 		UUID submissionId = jdbc.sql("""
@@ -166,7 +165,9 @@ public class SupportWorkService {
 				Map.of("workId", workId.toString(), "taskId", r.taskId().toString())));
 		SupportSubmissionDto dto = views.submissions(views.work(workId)).stream().filter(s -> s.id().equals(submissionId))
 				.findFirst().orElseThrow();
-		return new SubmitSupportResultResponse(dto, views.workDto(views.work(workId), user.id()));
+		SubmitSupportResultResponse response = new SubmitSupportResultResponse(dto, views.workDto(views.work(workId), user.id()));
+		requests.save(w.projectId(), user.id(), "support-submit:" + workId, idempotencyKey, req, response);
+		return response;
 	}
 
 	// ------------------------------------------------------------------------------------------------ không thể hoàn thành
@@ -175,6 +176,7 @@ public class SupportWorkService {
 	public SupportWorkDto unable(UUID workId, CurrentUser user, ReportUnableRequest req) {
 		Work w0 = views.work(workId);
 		access.requireMember(w0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, w0.projectId());
 		if (!user.id().equals(w0.helperId())) {
 			throw ApiException.forbidden("Chỉ người được chọn hỗ trợ mới báo được.");
 		}
@@ -207,6 +209,7 @@ public class SupportWorkService {
 	public SupportWorkDto resolve(UUID workId, CurrentUser user, String idempotencyKey, ResolveDiscussionRequest req) {
 		Work w0 = views.work(workId);
 		GroupMembership lead = access.requireLeader(w0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, w0.projectId());
 		IdempotencyKey.require(idempotencyKey);
 		Work w = views.workForUpdate(workId);
 		Req r = views.reqForUpdate(w.helpRequestId());
@@ -313,6 +316,7 @@ public class SupportWorkService {
 	 */
 	@Transactional
 	public void syncWork(UUID workId) {
+		app.hanare.task.WorkflowLocks.project(jdbc, views.work(workId).projectId());
 		Optional<Work> locked = jdbc.sql(HelpViews.WORK_SELECT + " WHERE id = :id FOR UPDATE").param("id", workId)
 				.query((rs, i) -> HelpViews.mapWork(rs)).optional();
 		if (locked.isEmpty() || !"SUBMITTED".equals(locked.get().status())) {

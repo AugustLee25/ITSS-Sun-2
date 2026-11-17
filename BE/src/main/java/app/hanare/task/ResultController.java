@@ -26,8 +26,9 @@ public class ResultController {
 
 	@PostMapping("/task-rounds/{roundId}/submissions")
 	@ResponseStatus(HttpStatus.CREATED)
-	Map<String, Object> submit(@PathVariable UUID roundId, CurrentUser user, @RequestBody ResultService.SubmitResultRequest body) {
-		return service.submit(roundId, user, body);
+	Map<String, Object> submit(@PathVariable UUID roundId, CurrentUser user, @RequestBody ResultService.SubmitResultRequest body,
+			@org.springframework.web.bind.annotation.RequestHeader(value = "Idempotency-Key", required = false) String key) {
+		return service.submit(roundId, user, body, key);
 	}
 
 	@GetMapping("/task-rounds/{roundId}/submissions")
@@ -41,14 +42,16 @@ public class ResultController {
 	}
 
 	@PostMapping("/task-submissions/{submissionId}/review")
-	Map<String, Object> review(@PathVariable UUID submissionId, CurrentUser user, @RequestBody ResultService.ReviewResultRequest body) {
-		return service.review(submissionId, user, body);
+	Map<String, Object> review(@PathVariable UUID submissionId, CurrentUser user, @RequestBody ResultService.ReviewResultRequest body,
+			@org.springframework.web.bind.annotation.RequestHeader(value = "Idempotency-Key", required = false) String key) {
+		return service.review(submissionId, user, body, key);
 	}
 
 	@PostMapping("/task-rounds/{roundId}/carryover")
 	ResponseEntity<Map<String, Object>> carryover(@PathVariable UUID roundId, CurrentUser user,
-			@RequestBody ResultService.CarryoverRequest body) {
-		ResultService.ResponseEntityLike r = service.carryover(roundId, user, body);
+			@RequestBody ResultService.CarryoverRequest body,
+			@org.springframework.web.bind.annotation.RequestHeader(value = "Idempotency-Key", required = false) String key) {
+		ResultService.ResponseEntityLike r = service.carryover(roundId, user, body, key);
 		return ResponseEntity.status(r.created() ? HttpStatus.CREATED : HttpStatus.OK).body(r.body());
 	}
 

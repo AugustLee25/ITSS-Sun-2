@@ -213,11 +213,11 @@ class AcceptanceE2ETest {
 		JsonNode detailLead = get("/groups/" + a.id() + "/checkpoint-cycles/" + cycleId, a.lead());
 		assertThat(detailLead.path("leadSummary").isObject()).as("TL thấy leadSummary").isTrue();
 		assertThat(detailLead.at("/leadSummary/cycleId").asString()).isEqualTo(cycleId);
-		assertThat(detailLead.at("/leadSummary/members/total").asInt()).isEqualTo(3);
+		assertThat(detailLead.at("/leadSummary/members/total").asInt()).as("Không có task nên không có nghĩa vụ báo cáo").isZero();
 		assertThat(get("/groups/" + a.id() + "/checkpoint-cycles/" + cycleId, a.members().get(0)).path("leadSummary").isNull())
 				.as("Member không thấy leadSummary").isTrue();
 		assertThat(get("/groups/" + a.id() + "/checkpoint-cycles/" + cycleId + "/lead-summary", a.lead()).at("/members/total").asInt())
-				.isEqualTo(3);
+				.isZero();
 
 		// tới giờ nhắc của B (13:00 VN CN)
 		runJob(Instant.parse("2026-11-22T06:00:00Z"));
@@ -405,6 +405,11 @@ class AcceptanceE2ETest {
 
 		// ---- Helper bị FIX_REQUIRED: work REVISION_REQUESTED + thông báo, carryover giữ Helper, nộp lại → đúng một AWARD nữa
 		clock.set(Instant.parse("2026-11-21T03:00:00Z"));
+		post("/groups/" + g.id() + "/help-requests", g.lead(), m("taskId", medium.id(), "beneficiaryId", a.id(),
+				"title", "Làm thay task trung bình", "description", "Cần người làm thay toàn bộ task trung bình", "privacyChecked", true), 409);
+		// Vòng đã chốt phải chuyển kỳ trước khi mở/bàn giao hỗ trợ.
+		JsonNode mediumCarry = post("/task-rounds/" + medium.roundId() + "/carryover", g.lead(),
+				m("targetCycleId", k2.path("id").asString(), "deadline", "2026-11-24T10:00:00Z"), 201);
 		JsonNode hr2 = post("/groups/" + g.id() + "/help-requests", g.lead(), m("taskId", medium.id(), "beneficiaryId", a.id(),
 				"title", "Làm thay task trung bình", "description", "Cần người làm thay toàn bộ task trung bình", "privacyChecked", true), 201);
 		JsonNode offer2 = post("/help-requests/" + hr2.path("id").asString() + "/offers", b,
@@ -412,10 +417,7 @@ class AcceptanceE2ETest {
 		JsonNode accept2 = post("/help-requests/" + hr2.path("id").asString() + "/accept-offer", g.lead(),
 				m("offerId", offer2.path("id").asString(), "version", get("/help-requests/" + hr2.path("id").asString(), g.lead()).path("version").asLong()), 200);
 		String work2 = accept2.at("/work/id").asString();
-		// vòng 1 của task trung bình đã quá hạn kỳ: Helper chờ TL chốt kỳ sau → carryover chưa có bản nộp
-		JsonNode mediumCarry = post("/task-rounds/" + medium.roundId() + "/carryover", g.lead(),
-				m("targetCycleId", k2.path("id").asString(), "deadline", "2026-11-24T10:00:00Z"), 201);
-		assertThat(mediumCarry.at("/task/currentExecutor/userId").asString()).as("carryover giữ Helper").isEqualTo(b.id().toString());
+		assertThat(get("/tasks/" + medium.id(), b).at("/currentExecutor/userId").asString()).as("bàn giao trên vòng mới").isEqualTo(b.id().toString());
 		clock.set(Instant.parse("2026-11-23T03:00:00Z"));
 		JsonNode s2 = post("/support-works/" + work2 + "/submissions", b, m("resultNote", "Bản đầu của task trung bình",
 				"evidence", List.of(m("type", "URL", "url", "https://github.com/x/y/pull/10")), "actualMinutes", 90), 201);

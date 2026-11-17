@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { hasStatus } from '@/api/errors'
 import { useMembers } from '@/api/groups'
 import { useCycles } from '@/api/schedule'
-import { useReviewPlan, useSubmitPlan, useWithdrawPlan } from '@/api/tasks'
+import { useReviewPlan, useSubmitPlan, useWithdrawPlan, useCancelPlan } from '@/api/tasks'
 import { PlanStatus, TaskAction, type PlanFieldChange, type PlanRevision, type TaskDetail } from '@/api/types'
 import {
   Button,
@@ -141,6 +141,7 @@ export function PlanSection({ task }: { task: TaskDetail }) {
   const members = useMembers(groupId)
   const submit = useSubmitPlan(groupId, task.id)
   const withdraw = useWithdrawPlan(groupId, task.id)
+  const cancel = useCancelPlan(groupId, task.id)
   const review = useReviewPlan(groupId, task.id)
   const [editing, setEditing] = useState(false)
   const [proposing, setProposing] = useState(false)
@@ -152,7 +153,7 @@ export function PlanSection({ task }: { task: TaskDetail }) {
   const pending = task.pendingRevision
   const hasEffective = !!effective
   const cycleList = cycles.data?.items ?? []
-  const actionError = submit.error ?? review.error ?? withdraw.error
+  const actionError = submit.error ?? review.error ?? withdraw.error ?? cancel.error
   const conflict = hasStatus(actionError, 409)
 
   if (!effective && !pending) return null
@@ -168,6 +169,11 @@ export function PlanSection({ task }: { task: TaskDetail }) {
             <StatusChip tone="success" size="sm" label={t('taskDetail.plan.revisionNo', { no: effective.revisionNo })} />
           </div>
           <PlanSummary plan={effective} />
+          {pending?.baseRevisionId && task.allowedActions.includes(TaskAction.CANCEL_PLAN_REVISION) ? (
+            <Button variant="secondary" loading={cancel.isPending} onClick={() => cancel.mutate({ planId: pending.id, version: pending.version })}>
+              {t('workflow.cancelRevision')}
+            </Button>
+          ) : null}
           {effective.reviewedBy && effective.reviewedAt ? (
             <p className={styles.muted}>
               {t('taskDetail.plan.approvedBy', { name: effective.reviewedBy.name, time: f.dateTime(effective.reviewedAt) })}

@@ -36,7 +36,7 @@ public class Ops {
 
 	/** Khóa dòng vòng xử lý (tuần tự hóa duyệt/nộp/chuyển kỳ của cùng task). */
 	public void lockRound(UUID roundId) {
-		jdbc.sql("SELECT id FROM task_review_rounds WHERE id = :r FOR UPDATE").param("r", roundId).query(UUID.class).list();
+		WorkflowLocks.round(jdbc, roundId);
 	}
 
 	public void bumpTask(UUID taskId) {

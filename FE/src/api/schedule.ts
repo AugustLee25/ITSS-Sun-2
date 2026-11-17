@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { useIdempotentMutation } from './idempotentMutation'
 import type {
@@ -67,4 +67,16 @@ export function useCycles(groupId: string, query: ListCyclesQuery = { sort: 'des
     enabled: !!groupId,
     staleTime: 60_000,
   })
+}
+
+/** Paginated options keep older checkpoints reachable instead of limiting the filter to 30 rows. */
+export function useCycleOptions(groupId: string) {
+  const query = useInfiniteQuery({
+    queryKey: [...scheduleKeys.cyclesAll(groupId), 'options'],
+    initialPageParam: 0,
+    queryFn: ({ pageParam, signal }) => api.get<Page<CheckpointCycle>>('/groups/' + enc(groupId) + '/checkpoint-cycles', { signal, query: { sort: 'desc', size: 30, page: pageParam } }),
+    getNextPageParam: (last) => last.page + 1 < last.totalPages ? last.page + 1 : undefined,
+    enabled: !!groupId,
+  })
+  return { ...query, data: query.data ? { items: query.data.pages.flatMap((page) => page.items) } : undefined }
 }

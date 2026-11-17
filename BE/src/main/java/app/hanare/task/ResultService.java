@@ -43,12 +43,14 @@ public class ResultService {
 	public record SubmitResultRequest(UUID planRevisionId, String resultNote, List<EvidenceInput> evidence) {
 	}
 
-	public record ReviewResultRequest(String decision, String issueDescription) {
+	public record ReviewResultRequest(String decision, String issueDescription, CarryoverRequest carryover) {
 	}
 
-	public record CarryoverRequest(UUID targetCycleId, Instant deadline, Instant startAt, String scopeNote, String decisionReason) {
+	public record CarryoverRequest(UUID targetCycleId, Instant deadline, Instant startAt, String scopeNote, String decisionReason, UUID sourceReportItemId) {
 	}
 
+	private final SubmissionWriter writer;
+	private final WorkflowRequests requests;
 	private final JdbcClient jdbc;
 	private final GroupAccess access;
 	private final Scope.Factory scopes;
@@ -62,7 +64,9 @@ public class ResultService {
 
 	public ResultService(JdbcClient jdbc, GroupAccess access, Scope.Factory scopes, TaskReader reader, TaskViews views,
 			CycleData data, CycleLifecycle lifecycle, Ops ops, ObjectProvider<TaskAcceptedHook> hooks,
-			ObjectProvider<SupportWorkService> supportWorks) {
+			ObjectProvider<SupportWorkService> supportWorks, SubmissionWriter writer, WorkflowRequests requests) {
+		this.writer = writer;
+		this.requests = requests;
 		this.supportWorks = supportWorks;
 		this.jdbc = jdbc;
 		this.access = access;
@@ -81,61 +85,29 @@ public class ResultService {
 
 	// ------------------------------------------------------------------ nộp minh chứng
 	@Transactional
-	public Map<String, Object> submit(UUID roundId, CurrentUser user, SubmitResultRequest r) {
-		Ctx c0 = reader.load(roundId).orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND, "Không tìm thấy vòng xử lý."));
-		UUID projectId = c0.round().projectId();
-		GroupMembership m = access.requireMember(projectId, user);
-		ops.lockRound(roundId);
-		// khóa kỳ ở chế độ chia sẻ: job chốt (cập nhật dòng kỳ) và nộp bài tuần tự hóa; submittedAt lấy SAU khi có khóa
-		Instant closesAt = jdbc.sql("SELECT closes_at FROM checkpoint_cycles WHERE id = :c FOR SHARE").param("c", c0.round().cycleId())
-				.query((rs, i) -> J.inst(rs, "closes_at")).single();
-		Ctx c = reader.require(roundId);
-		Scope s = scopes.of(projectId);
-		if (!user.id().equals(c.executor())) {
-			throw ApiException.of(ErrorCode.NOT_ASSIGNEE, null);
-		}
-		if (c.effective() == null) {
-			throw ApiException.of(HttpStatus.CONFLICT, "NO_EFFECTIVE_PLAN", "Task chưa có kế hoạch được duyệt.");
-		}
-		List<EvidenceInput> ev = validateEvidence(r);
-		if (r.resultNote() != null && r.resultNote().length() > 2000) {
-			throw ApiException.validation("resultNote", "Tối đa 2000 ký tự");
-		}
-		if (!List.of("ACTIVE", "AWAITING_REVIEW").contains(c.round().state())) {
-			throw ApiException.of(HttpStatus.CONFLICT, "ROUND_NOT_ACTIVE", "Vòng xử lý không còn nhận kết quả.");
-		}
-		if (!c.effective().id().equals(r.planRevisionId())) {
-			throw ApiException.of(HttpStatus.CONFLICT, "PLAN_CHANGED", "Kế hoạch đã thay đổi, hãy tải lại trước khi nộp.");
-		}
-		Instant now = ops.now();
-		if (now.isAfter(closesAt)) {
-			throw ApiException.of(HttpStatus.CONFLICT, "SUBMISSION_WINDOW_CLOSED", "Đã quá giờ chốt của kỳ — chờ TL chốt vòng xử lý tiếp.");
-		}
-		List<Map<String, Object>> evJson = ev.stream().map(e -> J.o("type", "URL", "url", e.url().strip(), "label",
-				e.label() == null || e.label().isBlank() ? null : e.label().strip())).toList();
-		UUID id = jdbc.sql("""
-				INSERT INTO task_submissions (project_id, round_id, plan_revision_id, submission_no, submitted_by, result_note,
-				    evidence, submitted_at, created_at)
-				VALUES (:p, :r, :plan, (SELECT COALESCE(MAX(submission_no), 0) + 1 FROM task_submissions WHERE round_id = :r), :u,
-				    :note, CAST(:ev AS jsonb), :at, :at) RETURNING id
-				""").param("p", projectId).param("r", roundId).param("plan", c.effective().id()).param("u", user.id())
-				.param("note", r.resultNote() == null || r.resultNote().isBlank() ? null : r.resultNote().strip())
-				.param("ev", views.evidenceJson(evJson)).param("at", DbTime.toDb(now)).query(UUID.class).single();
-		jdbc.sql("""
-				UPDATE task_review_rounds SET state = 'AWAITING_REVIEW', work_started_at = COALESCE(work_started_at, :at),
-				       version = version + 1 WHERE id = :r
-				""").param("at", DbTime.toDb(now)).param("r", roundId).update();
-		ops.bumpTask(c.round().taskId());
+	public Map<String, Object> submit(UUID roundId, CurrentUser user, SubmitResultRequest r) { return submit(roundId, user, r, null); }
+
+	@Transactional
+	public Map<String, Object> submit(UUID roundId, CurrentUser user, SubmitResultRequest r, String key) {
+		Ctx initial = reader.require(roundId);
+		UUID projectId = initial.round().projectId();
+		GroupMembership member = access.requireMember(projectId, user);
+		WorkflowLocks.project(jdbc, projectId);
+		String operation = "submit:" + roundId;
+		Map<String, Object> replay = requests.replay(user.id(), operation, key, r);
+		if (replay != null) return replay;
+		if (views.extras(List.of(initial)).supportWorks().containsKey(initial.round().taskId()))
+			throw ApiException.invalidState("Task đã bàn giao: nộp tại Công việc hỗ trợ hoặc checkpoint để đồng bộ đóng góp.");
+		Sub sub = writer.write(roundId, user, r, false);
+		Scope scope = scopes.of(projectId);
 		Ctx fresh = reader.require(roundId);
-		Sub sub = reader.submission(id).orElseThrow();
-		boolean onTime = !sub.submittedAt().isAfter(sub.planDeadline());
-		ops.history(projectId, user.id(), c.round().taskId(), "RESULT_SUBMITTED", c.round().roundNo(),
-				s.name(user.id()) + " nộp kết quả lần " + sub.no() + (onTime ? " (đúng hạn)" : " (trễ hạn)"), id);
-		return J.o("submission", views.submission(s, sub, c.round().taskId(), null, true), "task",
-				views.summary(s, fresh, viewer(m), views.extras(List.of(fresh))));
+		Map<String, Object> response = J.o("submission", views.submission(scope, sub, fresh.round().taskId(), null, true),
+				"task", views.summary(scope, fresh, viewer(member), views.extras(List.of(fresh))));
+		requests.save(projectId, user.id(), operation, key, r, response);
+		return response;
 	}
 
-	private List<EvidenceInput> validateEvidence(SubmitResultRequest r) {
+	public static List<EvidenceInput> validateEvidence(SubmitResultRequest r) {
 		List<EvidenceInput> ev = r.evidence();
 		if (ev == null || ev.isEmpty()) {
 			throw ApiException.of(HttpStatus.UNPROCESSABLE_ENTITY, "EVIDENCE_REQUIRED", "Cần ít nhất một liên kết minh chứng.");
@@ -190,7 +162,8 @@ public class ResultService {
 	}
 
 	private Target reload(Target t) {
-		Ctx c = reader.require(t.sub().roundId());
+		Ctx loaded = reader.require(t.sub().roundId());
+		Ctx c = reader.atCutoff(loaded,loaded.round().cycleId());
 		Extras x = views.extras(List.of(c));
 		return new Target(reader.submission(t.sub().id()).orElseThrow(), c, t.s(), t.m(), x.points().get(c.round().taskId()), x);
 	}
@@ -269,14 +242,26 @@ public class ResultService {
 	// ------------------------------------------------------------------ duyệt kết quả
 	@Transactional
 	public Map<String, Object> review(UUID submissionId, CurrentUser user, ReviewResultRequest req) {
+		return review(submissionId, user, req, null);
+	}
+
+	@Transactional
+	public Map<String, Object> review(UUID submissionId, CurrentUser user, ReviewResultRequest req, String key) {
 		Target t0 = target(submissionId, user);
 		UUID projectId = t0.c().round().projectId();
+		WorkflowLocks.project(jdbc, projectId);
+		String operation = "review:" + submissionId;
+		Map<String, Object> saved = requests.replay(user.id(), operation, key, req);
+		if (saved != null) return saved;
+		if (ops.now().isAfter(t0.s().cycle(t0.c().round().cycleId()).closesAt())) lifecycle.ensureFrozen(t0.c().round().cycleId());
 		ops.lockRound(t0.c().round().id());
 		Target t = reload(t0);
 		Scope s = t.s();
 		Ctx c = t.c();
 		Viewer v = viewer(t.m());
 		String decision = req.decision();
+		if (req.carryover() != null && !v.lead()) throw ApiException.of(ErrorCode.LEAD_ONLY, "Chỉ TL chốt hạn/chuyển kỳ.");
+		if (req.carryover() != null && "ACCEPTED".equals(decision)) throw ApiException.validation("carryover", "Không chuyển kỳ task đã chấp nhận.");
 		J.Check ck = J.check().require(List.of("ACCEPTED", "FIX_REQUIRED", "UPDATE_REQUIRED").contains(decision), "decision",
 				"Quyết định phải là ACCEPTED, FIX_REQUIRED hoặc UPDATE_REQUIRED");
 		if (decision != null && !"ACCEPTED".equals(decision)) {
@@ -295,7 +280,10 @@ public class ResultService {
 		Rev existing = reader.reviewOf(submissionId).orElse(null);
 		if (existing != null) {
 			if (existing.decision().equals(decision)) {
-				return reviewResponse(s, t, existing, v);
+				if (req.carryover() != null) carryover(c.round().id(), user, req.carryover());
+				Map<String, Object> response = reviewResponse(s, t, existing, v);
+				requests.save(projectId, user.id(), operation, key, req, response);
+				return response;
 			}
 			throw ApiException.of(HttpStatus.CONFLICT, "SUBMISSION_ALREADY_REVIEWED", "Lần nộp này đã có quyết định khác của TL.");
 		}
@@ -349,9 +337,12 @@ public class ResultService {
 				accepted ? "TL đã chấp nhận kết quả task \"" + title + "\"."
 						: "Task \"" + title + "\": " + req.issueDescription().strip(),
 				J.o("taskId", c.round().taskId(), "groupId", projectId, "submissionId", submissionId, "decision", decision));
+		if (!accepted && req.carryover() != null) carryover(c.round().id(), user, req.carryover());
 		lifecycle.finalizeIfDone(cy.id());
 		Rev rev = reader.reviewOf(submissionId).orElseThrow();
-		return reviewResponse(s, reload(t), rev, v);
+		Map<String, Object> response = reviewResponse(s, reload(t), rev, v);
+		requests.save(projectId, user.id(), operation, key, req, response);
+		return response;
 	}
 
 	private Map<String, Object> reviewResponse(Scope s, Target t0, Rev rev, Viewer v) {
@@ -384,9 +375,18 @@ public class ResultService {
 	// ------------------------------------------------------------------ chuyển kỳ
 	@Transactional
 	public ResponseEntityLike carryover(UUID roundId, CurrentUser user, CarryoverRequest r) {
+		return carryover(roundId, user, r, null);
+	}
+
+	@Transactional
+	public ResponseEntityLike carryover(UUID roundId, CurrentUser user, CarryoverRequest r, String key) {
 		Ctx c0 = reader.load(roundId).orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND, "Không tìm thấy vòng xử lý."));
 		UUID projectId = c0.round().projectId();
 		GroupMembership m = access.requireLeader(projectId, user);
+		WorkflowLocks.project(jdbc, projectId);
+		String operation = "carryover:" + roundId;
+		Map<String, Object> saved = requests.replay(user.id(), operation, key, r);
+		if (saved != null) return new ResponseEntityLike(false, saved);
 		J.Check ck = J.check().require(r.targetCycleId() != null, "targetCycleId", "Bắt buộc")
 				.require(r.deadline() != null, "deadline", "Bắt buộc");
 		if (r.scopeNote() != null && r.scopeNote().length() > 2000) {
@@ -396,13 +396,17 @@ public class ResultService {
 			ck.add("decisionReason", "Tối đa 1000 ký tự");
 		}
 		ck.done();
+		WorkflowLocks.project(jdbc, projectId);
+		if (ops.now().isAfter(scopes.of(projectId).cycle(c0.round().cycleId()).closesAt())) lifecycle.ensureFrozen(c0.round().cycleId());
 		ops.lockRound(roundId);
 		Ctx c = reader.require(roundId);
 		Scope s = scopes.of(projectId);
 		CycleRow src = s.cycle(c.round().cycleId());
 		Instant now = ops.now();
 		if ("CARRIED_OVER".equals(c.round().state())) {
-			return replay(s, c, r, m);
+			ResponseEntityLike result = replay(s, c, r, m);
+			requests.save(projectId, user.id(), operation, key, r, result.body());
+			return result;
 		}
 		if (!now.isAfter(src.closesAt()) || "ACCEPTED".equals(c.round().state()) || c.effective() == null) {
 			throw ApiException.of(HttpStatus.CONFLICT, "CARRYOVER_NOT_ALLOWED", "Vòng này chưa thuộc diện chuyển sang kỳ sau.");
@@ -429,7 +433,17 @@ public class ResultService {
 		if (!adjacent && (r.decisionReason() == null || r.decisionReason().strip().length() < 5)) {
 			throw ApiException.of(HttpStatus.UNPROCESSABLE_ENTITY, "CARRYOVER_REASON_REQUIRED", "Kỳ đích không liền sau: cần ghi lý do.");
 		}
+		if (r.deadline().isAfter(new TaskDeadline(jdbc).groupLimit(projectId))) throw ApiException.of(HttpStatus.UNPROCESSABLE_ENTITY, "DEADLINE_AFTER_GROUP_DEADLINE", "Deadline vượt hạn nhóm.");
 		Plan sp = c.effective();
+		if (r.sourceReportItemId() != null) {
+			Instant proposed = jdbc.sql("""
+					SELECT i.expected_completion_at FROM checkpoint_report_items i JOIN checkpoint_reports rep ON rep.id=i.report_id
+					 WHERE i.id=:i AND i.round_id=:r AND rep.status='SUBMITTED'
+					""").param("i",r.sourceReportItemId()).param("r",roundId).query((rs,i)->J.inst(rs,"expected_completion_at"))
+					.optional().orElseThrow(()->ApiException.validation("sourceReportItemId","Đề xuất không thuộc vòng nguồn."));
+			if (!proposed.equals(r.deadline()) && (r.decisionReason()==null || r.decisionReason().strip().length()<5))
+				throw ApiException.validation("decisionReason","Nhập lý do điều chỉnh hạn đề xuất.");
+		}
 		// 1) đóng vòng nguồn TRƯỚC (unique 'một vòng chưa kết thúc/task'), 2) tạo vòng đích, cùng transaction
 		jdbc.sql("UPDATE task_review_rounds SET state = 'CARRIED_OVER', closed_at = :at, version = version + 1 WHERE id = :r")
 				.param("at", DbTime.toDb(now)).param("r", roundId).update();
@@ -456,12 +470,25 @@ public class ResultService {
 				 WHERE id = :r
 				""").param("pl", plan).param("at", DbTime.toDb(now)).param("r", targetRound).update();
 		jdbc.sql("""
-				INSERT INTO task_carryovers (project_id, source_round_id, target_round_id, source_review_id, decided_by, decision_reason, decided_at)
-				VALUES (:p, :s, :t, :rev, :u, :why, :at)
+				INSERT INTO task_carryovers (project_id, source_round_id, target_round_id, source_review_id, decided_by, decision_reason, decided_at, source_report_item_id)
+				VALUES (:p, :s, :t, :rev, :u, :why, :at, :item)
 				""").param("p", projectId).param("s", roundId).param("t", targetRound).param("rev", c.rev() == null ? null : c.rev().id())
 				.param("u", user.id()).param("why", r.decisionReason() != null && !r.decisionReason().isBlank() ? r.decisionReason().strip()
 						: "Chuyển sang " + s.cycleLabel(target) + " theo quyết định của TL")
-				.param("at", DbTime.toDb(now)).update();
+				.param("item",r.sourceReportItemId()).param("at", DbTime.toDb(now)).update();
+		// An unaccepted offer acknowledged the old scope/deadline. Refresh the open request and
+		// require every pending helper to acknowledge the new commitment before handoff.
+		List<UUID> openRequests = jdbc.sql("SELECT id FROM help_requests WHERE task_id=:t AND status='OPEN'")
+				.param("t", c.round().taskId()).query(UUID.class).list();
+		for (UUID requestId : openRequests) {
+			jdbc.sql("""
+					UPDATE help_requests SET deadline=:dl, round_id=:round, updated_at=:at, version=version+1
+					 WHERE id=:h
+					""").param("dl", DbTime.toDb(r.deadline())).param("round", targetRound)
+					.param("at", DbTime.toDb(now)).param("h", requestId).update();
+			jdbc.sql("UPDATE support_offers SET needs_reconfirmation=true WHERE help_request_id=:h AND status='PENDING'")
+					.param("h", requestId).update();
+		}
 		ops.bumpTask(c.round().taskId());
 		ops.history(projectId, user.id(), c.round().taskId(), "CARRIED_OVER", c.round().roundNo() + 1,
 				s.name(user.id()) + " chốt deadline xử lý tiếp " + s.instantLabel(r.deadline()) + " (" + s.cycleLabel(target) + ")", targetRound);
@@ -470,7 +497,9 @@ public class ResultService {
 				"TL chốt deadline xử lý tiếp cho task \"" + sp.title() + "\": " + s.instantLabel(r.deadline()) + ".",
 				J.o("taskId", c.round().taskId(), "groupId", projectId, "roundId", targetRound));
 		lifecycle.finalizeIfDone(src.id());
-		return new ResponseEntityLike(true, carryoverBody(s, roundId, targetRound, plan, m));
+		Map<String, Object> response = carryoverBody(s, roundId, targetRound, plan, m);
+		requests.save(projectId, user.id(), operation, key, r, response);
+		return new ResponseEntityLike(true, response);
 	}
 
 	/** Cùng tham số → 200 replay kết quả hiện có; khác → 409 CARRYOVER_ALREADY_DONE. */

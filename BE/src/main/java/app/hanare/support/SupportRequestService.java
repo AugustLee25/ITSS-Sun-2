@@ -85,8 +85,10 @@ public class SupportRequestService {
 
 	@Transactional
 	public SupportRequestDto create(UUID taskId, CurrentUser user, CreateSupportRequestRequest req) {
-		TaskFacts f = tasks.facts(taskId).orElseThrow(() -> ApiException.notFound("Không tìm thấy task."));
-		GroupMembership m = access.requireMember(f.projectId(), user);
+		TaskFacts initial = tasks.facts(taskId).orElseThrow(() -> ApiException.notFound("Không tìm thấy task."));
+		GroupMembership m = access.requireMember(initial.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, initial.projectId());
+		TaskFacts f = tasks.facts(taskId).orElseThrow();
 		if (m.isLeader()) {
 			throw ApiException.of(ErrorCode.SELF_ACTION_FORBIDDEN,
 					"TL không gửi đề nghị hỗ trợ riêng cho chính mình; hãy đăng yêu cầu công khai khi cần.");
@@ -95,9 +97,10 @@ public class SupportRequestService {
 			throw ApiException.of(ErrorCode.NOT_ASSIGNEE, null);
 		}
 		UUID roundId = f.roundId();
+		app.hanare.task.WorkflowLocks.round(jdbc, roundId);
+		app.hanare.task.TaskWritePolicy.requireRoundExecution(jdbc, roundId, clock.instant());
 		if (req.roundId() != null) {
-			boolean ok = jdbc.sql("SELECT EXISTS (SELECT 1 FROM task_review_rounds WHERE id = :r AND task_id = :t)")
-					.param("r", req.roundId()).param("t", taskId).query(Boolean.class).single();
+			boolean ok = roundId.equals(req.roundId());
 			if (!ok) {
 				throw ApiException.validation("roundId", "Vòng không thuộc task này.");
 			}
@@ -175,6 +178,7 @@ public class SupportRequestService {
 	public SupportRequestDto decide(UUID id, CurrentUser user, SupportRequestDecisionRequest req) {
 		Row r0 = load(id);
 		GroupMembership m = access.requireLeader(r0.projectId(), user);
+		app.hanare.task.WorkflowLocks.project(jdbc, r0.projectId());
 		Row r = jdbc.sql(SELECT + " WHERE id = :id FOR UPDATE").param("id", id).query((rs, i) -> map(rs)).single();
 		if ("RESOLVED".equals(r.status())) {
 			throw Err.conflict("SUPPORT_REQUEST_CLOSED", "Đề nghị này đã được xử lý xong.");

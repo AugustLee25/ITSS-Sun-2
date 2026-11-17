@@ -76,7 +76,13 @@ class PointQueryTest extends ApiTestBase {
 		assertThat(titles).containsExactlyInAnyOrder("EASY", "MEDIUM", "HARD");
 		assertThat((String) at(all, "$.items[0].source")).isEqualTo("OWN");
 		assertThat((String) at(all, "$.items[0].currentRecipient.name")).isEqualTo(w.a().name());
-		assertThat((Integer) at(getOk(w.a(), g(w, "/points/me/tasks?status=NOT_STARTED")), "$.totalItems")).isZero();
+		assertThat((Integer) at(getOk(w.a(), g(w, "/points/me/tasks?status=NOT_STARTED")), "$.totalItems")).isEqualTo(3);
+		// Duyệt kế hoạch chưa phải bắt đầu thực hiện: S05 và S12 dùng cùng mốc work_started_at.
+		for (String key : List.of("a1", "a2")) {
+			String path = "/api/v1/tasks/" + w.t(key).taskId();
+			Number version = at(getOk(w.a(), path), "$.version");
+			postJson(w.a(), path + "/start", "{\"version\":" + version.longValue() + "}", 200);
+		}
 		assertThat((Integer) at(getOk(w.a(), g(w, "/points/me/tasks?status=IN_PROGRESS&size=2")), "$.items.length()")).isEqualTo(2);
 		assertThat((Integer) at(getOk(w.a(), g(w, "/points/me/tasks?source=TAKEN_OVER")), "$.totalItems")).isZero();
 		assertThat(errorCode(getStatus(w.a(), g(w, "/points/me/tasks?status=NOPE"), 400))).isEqualTo("VALIDATION_FAILED");

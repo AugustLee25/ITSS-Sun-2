@@ -132,7 +132,7 @@ class DashboardTest extends B1Base {
 		assertThat((Boolean) at(m, "$.flags.groupHasAnyTask")).isTrue();
 		assertThat((Boolean) at(m, "$.myPoints.policyActive")).isFalse();
 		assertThat((Object) at(m, "$.myPoints.confirmedPoints")).isNull();
-		assertThat((Integer) at(m, "$.myTasks.length()")).isEqualTo(1);
+		assertThat((Integer) at(m, "$.myTasks.length()")).isEqualTo(0);
 		assertThat((Integer) at(m, "$.nextCheckpoint.myRequiredTaskCount")).isEqualTo(0); // chưa có kế hoạch duyệt
 		assertThat((String) at(m, "$.sharedRisks[0].publicSummary")).isEqualTo("Phần API có thể cần thêm 1 ngày");
 		assertThat((String) at(m, "$.sharedRisks[0].taskTitle")).isEqualTo("Đã duyệt");

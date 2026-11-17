@@ -38,8 +38,19 @@ public class TaskController {
 	}
 
 	@GetMapping("/tasks/{taskId}")
-	Map<String, Object> get(@PathVariable UUID taskId, CurrentUser user) {
-		return service.get(taskId, user);
+	Map<String, Object> get(@PathVariable UUID taskId, @RequestParam(required = false) UUID roundId, CurrentUser user) {
+		return service.get(taskId, roundId, user);
+	}
+
+	@PostMapping("/groups/{groupId}/plans/submit")
+	Map<String, Object> submitBatch(@PathVariable UUID groupId, CurrentUser user, @RequestBody TaskService.PlanBatchRequest body,
+			@org.springframework.web.bind.annotation.RequestHeader(value = "Idempotency-Key", required = false) String key) {
+		return service.submitBatch(groupId, user, body, key);
+	}
+
+	@PostMapping("/plans/{planId}/cancel")
+	Map<String, Object> cancel(@PathVariable UUID planId, CurrentUser user, @RequestBody TaskService.VersionedRequest body) {
+		return service.cancelRevision(planId, user, body);
 	}
 
 	@GetMapping("/tasks/{taskId}/history")

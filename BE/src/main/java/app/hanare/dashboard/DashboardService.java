@@ -103,14 +103,15 @@ public class DashboardService {
 		for (Member mem : members) {
 			List<Row> mine = rows.stream().filter(r -> r.assigneeId().equals(mem.id())).toList();
 			progress.add(progress(s, cy, mem, mine, rep, dropouts.get(mem.id())));
-			if (rep.reportOf().containsKey(mem.id())) {
+			if (!mine.isEmpty() && rep.reportOf().containsKey(mem.id())) {
 				reported++;
 			}
 			else if (!mine.isEmpty()) {
 				missingNeeded = true;
 			}
 		}
-		int notResponded = members.size() - reported;
+		long obligated = members.stream().filter(mem -> rows.stream().anyMatch(r -> r.assigneeId().equals(mem.id()))).count();
+		int notResponded = (int) obligated - reported;
 
 		Map<String, Object> m = new LinkedHashMap<>();
 		m.put("serverTime", J.t(now));
@@ -120,9 +121,17 @@ public class DashboardService {
 		m.put("previousCycleId", cy.previousCycleId());
 		m.put("nextCycleId", s.next(cy).map(CycleRow::id).orElse(null));
 		m.put("myActions", myActions(s, cy, v, all, x, rows, rep));
-		List<Ctx> mineCtx = all.values().stream().filter(c -> me.equals(c.executor()) && !List.of("ACCEPTED", "CARRIED_OVER").contains(c.round().state()))
-				.sorted(Comparator.comparing((Ctx c) -> c.deadline() == null ? Instant.MAX : c.deadline())).limit(5).toList();
-		m.put("myTasks", mineCtx.stream().map(c -> views.summary(s, c, v, x)).toList());
+		Instant displayAt = s.now().isAfter(cy.closesAt()) ? cy.closesAt() : s.now();
+		List<Ctx> candidates = s.now().isAfter(cy.closesAt()) ? rows.stream().map(Row::ctx).toList() : new ArrayList<>(all.values());
+		List<Map<String,Object>> mineTasks = candidates.stream().filter(c -> c.committed() && me.equals(c.executor())
+				&& !List.of("ACCEPTED", "CARRIED_OVER").contains(c.round().state())
+				&& !s.cycle(c.round().cycleId()).periodStartAt().isAfter(cy.closesAt())
+				&& s.cycle(c.round().cycleId()).sequenceNo() <= cy.sequenceNo())
+					.map(c -> views.summary(s,c,v,x,displayAt))
+				.sorted(Comparator.<Map<String,Object>>comparingInt(t -> "ON_TIME_PENDING_REVIEW".equals(t.get("timeliness")) ? 1 : 0)
+						.thenComparing(Comparator.comparingInt((Map<String,Object> t)->(Integer)t.get("missedCheckpointCount")).reversed())
+						.thenComparing(t->(String)t.get("deadline"))).limit(5).toList();
+		m.put("myTasks", mineTasks);
 		List<Row> myRows = rows.stream().filter(r -> r.assigneeId().equals(me)).toList();
 		long myResponded = myRows.stream().filter(r -> rep.item(me, r.roundId()) != null).count();
 		String myState = rep.state(me);

@@ -117,6 +117,7 @@ public class PointPolicyService {
 	public ActivatePointPolicyResponse activate(UUID projectId, CurrentUser user, String idempotencyKey,
 			ActivatePointPolicyRequest req) {
 		GroupMembership lead = access.requireLeader(projectId, user);
+		app.hanare.task.WorkflowLocks.project(jdbc, projectId);
 		IdempotencyKey.require(idempotencyKey);
 		if (req == null || !Boolean.TRUE.equals(req.confirmedWithMembers())) {
 			throw ApiException.validation("confirmedWithMembers", "TL phải xác nhận phương án đã thống nhất với các thành viên.");

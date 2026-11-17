@@ -23,10 +23,12 @@ public class HandoffService {
 
 	private final JdbcClient jdbc;
 	private final TaskReader tasks;
+	private final java.time.Clock clock;
 
-	public HandoffService(JdbcClient jdbc, TaskReader tasks) {
+	public HandoffService(JdbcClient jdbc, TaskReader tasks, java.time.Clock clock) {
 		this.jdbc = jdbc;
 		this.tasks = tasks;
+		this.clock = clock;
 	}
 
 	/**
@@ -50,6 +52,7 @@ public class HandoffService {
 		if (tasks.inFlightRevision(f.roundId()).isPresent()) {
 			throw Err.conflict("TASK_NOT_TRANSFERABLE", "Task đang có bản sửa kế hoạch chưa được xử lý.");
 		}
+		app.hanare.task.TaskWritePolicy.requireRoundExecution(jdbc, f.roundId(), clock.instant());
 	}
 
 	/**
@@ -57,6 +60,9 @@ public class HandoffService {
 	 * mới) và đặt làm {@code effective_plan_id}. Snapshot kỳ đã chốt không bị đụng tới.
 	 */
 	public UUID handoffRevision(TaskFacts f, UUID newAssignee, UUID byUser, Instant now, String note) {
+		// Unsent items are not obligations after handoff. Submitted items are protected by requireTransferable.
+		jdbc.sql("DELETE FROM checkpoint_report_items i USING checkpoint_reports rep WHERE i.report_id=rep.id AND i.round_id=:r AND rep.status='DRAFT'")
+				.param("r",f.roundId()).update();
 		UUID revisionId = jdbc.sql("""
 				INSERT INTO task_plan_revisions (project_id, round_id, revision_no, base_revision_id, proposed_cycle_id,
 				    assignee_id, title, description, expected_output, start_at, deadline, difficulty, status, created_by,
@@ -71,6 +77,8 @@ public class HandoffService {
 				.param("base", f.effectivePlanId()).query(UUID.class).single();
 		jdbc.sql("UPDATE task_review_rounds SET effective_plan_id = :plan, version = version + 1 WHERE id = :r")
 				.param("plan", revisionId).param("r", f.roundId()).update();
+		jdbc.sql("UPDATE checkpoint_task_snapshots SET assignee_id=:a, approved_plan_id=:p WHERE round_id=:r AND frozen_at IS NULL")
+				.param("a",newAssignee).param("p",revisionId).param("r",f.roundId()).update();
 		return revisionId;
 	}
 

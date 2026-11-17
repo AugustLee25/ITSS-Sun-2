@@ -5,6 +5,7 @@ import { paths } from '@/app/routes'
 import { Card, CardActions, CardChips, CardHead, MetaList, PointsText, StatusChip, StretchedLink, useStatusChip } from '@/components'
 import { useT } from '@/i18n'
 import { useFormatters } from '@/lib/timeZoneContext'
+import styles from './Tasks.module.css'
 
 /**
  * Thẻ task dùng ở S03 (việc của tôi) và S04 (danh sách). Hai nhãn tách bạch: `Kế hoạch` và `Thực hiện` (spec S05);
@@ -14,11 +15,13 @@ export function TaskSummaryCard({
   task,
   groupId,
   showAssignee = true,
+  compact = false,
   actions,
 }: {
   task: TaskSummary
   groupId: string
   showAssignee?: boolean
+  compact?: boolean
   actions?: ReactNode
 }) {
   const t = useT()
@@ -31,24 +34,29 @@ export function TaskSummaryCard({
   const risk = chip('risk', task.riskStatus)
   const takeover = task.originalAssignee.userId !== task.currentExecutor.userId
 
+  const missed = task.missedCheckpointCount ?? 0
+  const overdue = task.currentlyOverdue ?? (task.isLate && task.taskStatus !== 'DONE')
+  const href = paths.task(groupId, task.id) + (task.isHistorical ? '?roundId=' + encodeURIComponent(task.roundId) : '')
   return (
-    <Card as="article" interactive accent={task.isLate || task.needsCarryover ? 'warning' : 'none'}>
+    <Card as="article" interactive className={overdue && missed > 0 ? missed >= 2 ? styles.delayDanger : styles.delayWarning : undefined} accent={overdue ? missed >= 2 ? 'danger' : 'warning' : 'none'}>
       <CardHead
-        title={<StretchedLink to={paths.task(groupId, task.id)}>{task.title}</StretchedLink>}
+        title={<StretchedLink to={href}>{task.title}</StretchedLink>}
         status={<StatusChip tone={execution.tone} label={t('tasks.card.execution', { status: execution.label })} />}
       />
       <MetaList
         items={[
           showAssignee ? { label: t('fields.assignee'), value: task.currentExecutor.name } : null,
           { label: t('tasks.card.cycle'), value: t('tasks.card.cycleValue', { no: task.cycle.sequenceNo }) },
-          task.startAt ? { label: t('tasks.card.start'), value: <time dateTime={task.startAt}>{f.dateTime(task.startAt)}</time> } : null,
+          !compact && task.startAt ? { label: t('tasks.card.start'), value: <time dateTime={task.startAt}>{f.dateTime(task.startAt)}</time> } : null,
           task.deadline ? { label: t('fields.deadline'), value: <time dateTime={task.deadline}>{f.dateTime(task.deadline)}</time> } : null,
-          task.difficulty ? { label: t('fields.difficulty'), value: t(`status.difficulty.${task.difficulty}`) } : null,
-          task.points ? { label: t('fields.points'), value: <PointsText>{f.pointsLabel(task.points.amount)}</PointsText> } : null,
+          !compact && task.difficulty ? { label: t('fields.difficulty'), value: t(`status.difficulty.${task.difficulty}`) } : null,
+          !compact && task.points ? { label: t('fields.points'), value: <PointsText>{f.pointsLabel(task.points.amount)}</PointsText> } : null,
         ]}
       />
       <CardChips>
-        <StatusChip tone={plan.tone} size="sm" label={t('tasks.card.plan', { status: plan.label })} />
+        {overdue && missed > 0 ? <StatusChip tone={missed >= 2 ? 'danger' : 'warning'} size="sm" label={t('workflow.missed', { count: missed })} /> : null}
+        {task.roundState === 'CARRIED_OVER' ? <StatusChip tone="muted" size="sm" label={t('workflow.carried')} /> : null}
+        {!compact ? <StatusChip tone={plan.tone} size="sm" label={t('tasks.card.plan', { status: plan.label })} /> : null}
         {task.pendingRevisionStatus ? (
           <StatusChip
             tone={chip('plan', task.pendingRevisionStatus).tone}

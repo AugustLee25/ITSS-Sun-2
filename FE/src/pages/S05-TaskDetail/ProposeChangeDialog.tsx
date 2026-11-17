@@ -102,7 +102,7 @@ export function ProposeChangeDialog({
       >
         <FormProvider {...form}>
           <form noValidate onSubmit={(event) => event.preventDefault()}>
-            <PlanFormFields cycles={options} members={members} timeZone={timeZone} showAssignee />
+            <PlanFormFields cycles={options} members={members} timeZone={timeZone} showAssignee={false} />
             <FormField label={t('taskDetail.plan.proposeReason')} required error={form.formState.errors.changeReason?.message}>
               <Textarea rows={3} {...form.register('changeReason')} />
             </FormField>

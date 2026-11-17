@@ -24,6 +24,8 @@ import type {
   SetIndependentReviewerRequest,
   SubmitResultRequest,
   SubmitResultResponse,
+  SubmitPlanBatchRequest,
+  SubmitPlanBatchResponse,
   TaskDetail,
   TaskHistoryEntry,
   TaskSubmission,
@@ -51,6 +53,10 @@ export const taskKeys = {
 
 /** Sau mọi thao tác ghi vào task: làm mới chi tiết, danh sách, hàng đợi duyệt và bảng tổng quan của nhóm. */
 export function invalidateTaskData(queryClient: QueryClient, groupId: string, taskId?: string) {
+	if (!taskId) void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+	void queryClient.invalidateQueries({ queryKey: ['checkpoint-report', groupId] })
+	void queryClient.invalidateQueries({ queryKey: ['support-work'] })
+	void queryClient.invalidateQueries({ queryKey: ['points'] })
   if (taskId) void queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) })
   if (taskId) void queryClient.invalidateQueries({ queryKey: taskKeys.historyAll(taskId) })
   void queryClient.invalidateQueries({ queryKey: taskKeys.lists(groupId) })
@@ -72,12 +78,28 @@ export function useTasks(groupId: string, query: ListTasksQuery) {
 }
 
 /** S05: chi tiết task (phiên bản kế hoạch, vòng, lần nộp, `allowedActions`). */
-export function useTask(taskId: string) {
+export function useTask(taskId: string, roundId?: string | null) {
   return useQuery({
-    queryKey: taskKeys.detail(taskId),
-    queryFn: ({ signal }) => api.get<TaskDetail>(`/tasks/${enc(taskId)}`, { signal }),
+    queryKey: roundId ? [...taskKeys.detail(taskId), roundId] : taskKeys.detail(taskId),
+    queryFn: ({ signal }) => api.get<TaskDetail>(`/tasks/${enc(taskId)}`, { signal, query: roundId ? { roundId } : undefined }),
     enabled: !!taskId,
     staleTime: 10_000,
+  })
+}
+
+export function useSubmitPlanBatch(groupId: string) {
+  const client = useQueryClient()
+  return useIdempotentMutation<SubmitPlanBatchResponse, SubmitPlanBatchRequest['items']>({
+    mutationFn: (items, idempotencyKey) => api.post(`/groups/${enc(groupId)}/plans/submit`, { items }, { idempotencyKey }),
+    onSuccess: () => invalidateTaskData(client, groupId),
+  })
+}
+
+export function useCancelPlan(groupId: string, taskId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ planId, version }: { planId: string; version: number }) => api.post(`/plans/${enc(planId)}/cancel`, { version }),
+    onSuccess: () => invalidateTaskData(client, groupId, taskId),
   })
 }
 

@@ -19,6 +19,61 @@ import org.springframework.test.web.servlet.MvcResult;
 @HanareTest
 @Import(RecordingNotifications.Config.class)
 class HelpFlowTest extends HelpTestBase {
+	@Test
+	void openOfferRequiresReconfirmationAfterCarryoverAndUsesTheTargetRound() throws Exception {
+		World w = world();
+		activate(w);
+		MvcResult pub = publish(w, "a3", w.a());
+		UUID request = uuid(pub, "$.id");
+		UUID offerId = uuid(offer(w.b(), request, version(pub), 201), "$.id");
+		clock.set(w.cycle().closesAt().plusSeconds(1));
+		accept(w, request, offerId, version(pub), 409);
+		MvcResult cycles = getOk(w.lead(), groupPath(w, "/checkpoint-cycles?sort=asc&size=10"));
+		String target = at(cycles, "$.items[1].id");
+		String deadline = "2026-11-25T10:00:00Z";
+		MvcResult carry = postIdem(w.lead(), "/api/v1/task-rounds/" + w.t("a3").roundId() + "/carryover",
+				"{\"targetCycleId\":\"" + target + "\",\"deadline\":\"" + deadline + "\"}", 201);
+		MvcResult refreshed = getOk(w.lead(), "/api/v1/help-requests/" + request);
+		assertThat((String) at(refreshed, "$.deadline")).isEqualTo(deadline);
+		assertThat((String) at(refreshed, "$.description")).isEqualTo(at(pub, "$.description"));
+		assertThat(errorCode(accept(w, request, offerId, version(refreshed), 409))).isEqualTo("OFFER_NEEDS_RECONFIRMATION");
+		postJson(w.b(), "/api/v1/support-offers/" + offerId + "/reconfirm", "{\"helpRequestVersion\":" + version(refreshed) + "}", 200);
+		MvcResult accepted = accept(w, request, offerId, version(refreshed), 200);
+		UUID targetRound = uuid(carry, "$.targetRound.id");
+		assertThat(effectiveAssignee(targetRound)).isEqualTo(w.b().id());
+		assertThat(effectiveAssignee(w.t("a3").roundId())).isEqualTo(w.a().id());
+		assertThat((String) at(accepted, "$.work.deadlineSnapshot")).isEqualTo(deadline);
+		assertQuotaInvariant(w);
+	}
+
+	@Test
+	void helperCheckpointUsesSharedSubmissionAndHandoffInvalidatesOnlyUnsentDraftItems() throws Exception {
+		World w=world(); activate(w);
+		String report=groupPath(w,"/checkpoint-cycles/"+w.cycle().id()+"/my-report");
+		String draft="{\"version\":null,\"items\":[{\"taskId\":\""+w.t("a3").taskId()+"\",\"declaredResult\":\"RESULT_MISSING\",\"riskLevel\":\"ON_TRACK\",\"note\":\"Nháp chưa gửi của người gốc\"}]}";
+		call(w.a(),org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(report).contentType(MediaType.APPLICATION_JSON).content(draft),200);
+		MvcResult accepted=publishAndAccept(w,"a3",w.a(),w.b()); UUID work=uuid(accepted,"$.work.id");
+		assertThat(errorCode(postIdem(w.b(),"/api/v1/task-rounds/"+w.t("a3").roundId()+"/submissions",evidenceJson(),409))).isEqualTo("INVALID_STATE");
+		MvcResult view=getOk(w.b(),report);
+		List<java.util.Map<String,Object>> rows=at(view,"$.items");
+		List<java.util.Map<String,Object>> items=new java.util.ArrayList<>();
+		for(java.util.Map<String,Object> row:rows) {
+			boolean helper=w.t("a3").taskId().toString().equals(row.get("taskId"));
+			items.add(app.hanare.task.J.o("taskId",row.get("taskId"),"roundId",row.get("roundId"),"planRevisionId",row.get("currentPlanRevisionId"),
+					"declaredResult",helper?"RESULT_SUBMITTED":"RESULT_MISSING","riskLevel","ON_TRACK","note","Cần thêm dữ liệu",
+					"expectedCompletionAt","2026-11-19T10:00:00Z","evidence",helper?List.of(app.hanare.task.J.o("type","URL","url","https://example.test/helper")):List.of()));
+		}
+		String json=tools.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(app.hanare.task.J.o("version",null,"items",items));
+		postIdem(w.b(),report+"/submit",json,200);
+		UUID taskSub=latestSubmission(w.t("a3").roundId());
+		assertThat(count("SELECT count(*) FROM support_submissions WHERE task_submission_id=:p1 AND work_id=:p2",taskSub,work)).isEqualTo(1);
+		assertThat((Boolean)at(getOk(w.b(),"/api/v1/support-works/"+work),"$.canSubmit")).isFalse();
+		clock.set(w.cycle().closesAt().plusSeconds(1));
+		postIdem(w.lead(),"/api/v1/task-submissions/"+taskSub+"/review","{\"decision\":\"ACCEPTED\"}",200);
+		assertThat(count("SELECT count(*) FROM contributions WHERE work_id=:p1 AND status='CONFIRMED'",work)).isEqualTo(1);
+		assertThat(count("SELECT count(*) FROM point_ledger_entries WHERE project_id=:p1 AND entry_type='AWARD'",w.pid())).isEqualTo(1);
+		assertQuotaInvariant(w);
+	}
 
 	// ------------------------------------------------------------------------------------------------ đăng
 
@@ -107,12 +162,12 @@ class HelpFlowTest extends HelpTestBase {
 				VALUES (:p, :r, 2, :base, :u, 'DRAFT')
 				""").param("p", w.pid()).param("r", b1.roundId()).param("base", b1.planId()).param("u", w.b().id()).update();
 		assertThat(errorCode(postIdem(w.lead(), path, publishJson(w, "b1", w.b(), null), 409))).isEqualTo("TASK_NOT_TRANSFERABLE");
-		// a3: bị yêu cầu sửa (FIX_REQUIRED) -> được phép bàn giao
+		// a3: bị yêu cầu sửa ở vòng cũ -> phải chuyển kỳ trước khi bàn giao
 		TaskRef a3 = w.t("a3");
 		UUID fixSub = fx.submission(w.pid(), a3, 1, Instant.parse("2026-11-17T03:00:00Z"));
 		fx.review(w.pid(), fixSub, w.lead().id(), "FIX_REQUIRED", Instant.parse("2026-11-21T03:00:00Z"));
 		jdbc.sql("UPDATE task_review_rounds SET state = 'CARRYOVER_REQUIRED' WHERE id = :r").param("r", a3.roundId()).update();
-		postIdem(w.lead(), path, publishJson(w, "a3", w.a(), null), 201);
+		postIdem(w.lead(), path, publishJson(w, "a3", w.a(), null), 409);
 	}
 
 	@Test
@@ -405,7 +460,9 @@ class HelpFlowTest extends HelpTestBase {
 		assertThat(count("SELECT COUNT(*) FROM contributions WHERE work_id = :p1 AND status = 'PENDING_CONFIRMATION'", workId)).isEqualTo(1);
 		assertThat(count("SELECT COUNT(*) FROM help_requests WHERE id = :p1 AND status = 'SUBMITTED'", uuid(acc, "$.helpRequest.id"))).isEqualTo(1);
 		assertThat(notes.ofType("SUPPORT_SUBMITTED").get(0).recipientIds()).containsExactly(w.lead().id());
-		assertThat(errorCode(helperSubmit(w.b(), workId, 409))).isEqualTo("WORK_NOT_SUBMITTABLE");
+		MvcResult revised = helperSubmit(w.b(), workId, 201);
+		assertThat((Integer) at(revised, "$.submission.revisionNo")).isEqualTo(2);
+		taskSub = uuid(revised, "$.submission.taskSubmissionId");
 		assertThat(count("SELECT COUNT(*) FROM point_ledger_entries WHERE project_id = :p1", w.pid())).isZero(); // nộp ≠ ghi điểm
 
 		// sau giờ chốt TL xem được bản nộp để duyệt

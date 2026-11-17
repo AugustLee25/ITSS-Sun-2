@@ -2,6 +2,7 @@
 rem HANARE demo: BE (profile demo, PostgreSQL nhung, khong can Docker, cong 8080) o cua so rieng, roi FE (cong 5173).
 rem Tai khoan: xem http://localhost:8080/api/v1/demo/accounts (mat khau chung Demo@1234). Dong cua so "HANARE BE demo" de tat BE.
 setlocal
+set "PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0;%SystemRoot%\System32;%PATH%"
 cd /d "%~dp0"
 
 start "HANARE BE demo" /D "%~dp0BE" cmd /c ".\mvnw.cmd -B spring-boot:test-run & pause"

@@ -146,6 +146,7 @@ export function MyTasksBlock({
                 task={task}
                 groupId={groupId}
                 showAssignee={false}
+                compact
                 actions={
                   <>
                     <ButtonLink to={paths.task(groupId, task.id)} variant="secondary">

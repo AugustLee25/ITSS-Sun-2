@@ -51,6 +51,7 @@ export const PlanStatus = {
   PENDING_APPROVAL: 'PENDING_APPROVAL',
   CHANGES_REQUESTED: 'CHANGES_REQUESTED',
   APPROVED: 'APPROVED',
+  CANCELLED: 'CANCELLED',
 } as const;
 export type PlanStatus = (typeof PlanStatus)[keyof typeof PlanStatus];
 
@@ -120,6 +121,7 @@ export const TaskTimeliness = {
 export type TaskTimeliness = (typeof TaskTimeliness)[keyof typeof TaskTimeliness];
 
 export const TaskAction = {
+  CANCEL_PLAN_REVISION: 'CANCEL_PLAN_REVISION',
   EDIT_PLAN: 'EDIT_PLAN',
   SUBMIT_PLAN: 'SUBMIT_PLAN',
   WITHDRAW_PLAN: 'WITHDRAW_PLAN',
@@ -1147,6 +1149,8 @@ export interface DashboardResponse {
 
 /** Một dòng task trong một kỳ (dựng từ snapshot/vòng xử lý, không dựng lại từ trạng thái hiện tại). */
 export interface CycleTaskRow {
+  expectedCompletionAt?: IsoInstant | null;
+  reportItemId?: Uuid | null;
   taskId: Uuid;
   roundId: Uuid;
   roundNo: number;
@@ -1206,6 +1210,12 @@ export interface TaskPointsBrief {
 }
 
 export interface TaskSummary {
+  roundState?: RoundState;
+  isHistorical?: boolean;
+  missedCheckpointCount?: number;
+  currentlyOverdue?: boolean;
+  draftPlanId?: Uuid | null;
+  draftPlanVersion?: number | null;
   id: Uuid;
   groupId: Uuid;
   title: string;
@@ -1357,6 +1367,8 @@ export interface ProgressNote {
 }
 
 export interface TaskDetail extends TaskSummary {
+  carryoverProposal?: { reportItemId: Uuid; expectedCompletionAt: IsoInstant | null; note: string | null } | null;
+  supportWorkId?: Uuid | null;
   /** Phạm vi (từ bản hiệu lực, hoặc bản nháp nếu chưa duyệt). */
   description: string | null;
   expectedOutput: string | null;
@@ -1384,6 +1396,7 @@ export interface TaskDetail extends TaskSummary {
 }
 
 export interface ListTasksQuery extends PageQuery {
+  completion?: 'DONE' | 'UNFINISHED' | 'OVERDUE';
   tab?: TaskListTab;
   cycleId?: Uuid;
   /** Lọc theo người thực hiện hiện tại. */
@@ -1399,16 +1412,16 @@ export interface ListTasksQuery extends PageQuery {
 export interface CreateTaskRequest {
   /** 3–120 ký tự. */
   title: string;
-  assigneeId: Uuid;
+  assigneeId?: Uuid;
   /** Kỳ ("tuần") của task. */
   cycleId: Uuid;
   /** Phạm vi, 1–4000 ký tự. */
-  description: string;
+  description?: string;
   /** Đầu ra, 1–2000 ký tự. */
-  expectedOutput: string;
-  startAt: IsoInstant;
-  deadline: IsoInstant;
-  difficulty: Difficulty;
+  expectedOutput?: string;
+  startAt?: IsoInstant;
+  deadline?: IsoInstant;
+  difficulty?: Difficulty;
 }
 
 export interface UpdatePlanRequest {
@@ -1460,6 +1473,15 @@ export interface PlanMutationResponse {
   task: TaskSummary;
 }
 
+export interface SubmitPlanBatchRequest {
+  /** 1–100 kế hoạch của chính người gửi; lỗi một dòng rollback toàn bộ lô. */
+  items: Array<{ planId: Uuid; version: number }>;
+}
+
+export interface SubmitPlanBatchResponse {
+  items: PlanMutationResponse[];
+}
+
 export interface ProgressUpdateRequest {
   /** 1–1000 ký tự. */
   note: string;
@@ -1498,6 +1520,7 @@ export interface SubmitResultResponse {
 }
 
 export interface ReviewResultRequest {
+  carryover?: CarryoverRequest | null;
   decision: TaskReviewDecision;
   /** Bắt buộc 10–2000 ký tự khi FIX_REQUIRED / UPDATE_REQUIRED. */
   issueDescription?: string | null;
@@ -1556,6 +1579,7 @@ export interface ReviewPreviewResponse {
 }
 
 export interface CarryoverRequest {
+  sourceReportItemId?: Uuid | null;
   /** Kỳ kế tiếp (hoặc kỳ tương lai còn phù hợp). */
   targetCycleId: Uuid;
   /** Phải ở tương lai và trong (periodStartAt, closesAt] của kỳ đích. */
@@ -1603,6 +1627,16 @@ export interface SubmissionBrief {
 }
 
 export interface ReportItem {
+  /** null nếu báo cáo cũ không đủ dữ liệu xác định revision; không đoán từ kế hoạch hiện tại. */
+  planRevisionId?: Uuid | null;
+  planReferenceKnown?: boolean;
+  currentPlanRevisionId?: Uuid;
+  currentSubmissionId?: Uuid | null;
+  submissionAtCutoff?: SubmissionBrief | null;
+  draftEvidence?: EvidenceItem[];
+  draftResultNote?: string | null;
+  canReportDifficulty?: boolean;
+  supportWorkId?: Uuid | null;
   taskId: Uuid;
   roundId: Uuid;
   roundNo: number;
@@ -1614,7 +1648,7 @@ export interface ReportItem {
   timeliness: TaskTimeliness;
   timelinessLabel: string;
   isLate: boolean;
-  /** Lần nộp thật mới nhất (điền sẵn minh chứng); null nếu chưa nộp. */
+  /** Lần nộp gắn với revision báo cáo đang xem; null nếu chưa nộp. */
   submission: SubmissionBrief | null;
   declaredResult: CheckpointTaskResult | null;
   /** true = giá trị do server điền sẵn, chưa do người dùng xác nhận. */
@@ -1643,6 +1677,7 @@ export interface ReportCompleteness {
 }
 
 export interface MyReportResponse {
+  reportId?: Uuid | null;
   serverTime: IsoInstant;
   cycle: CheckpointCycle;
   state: MemberReportState;
@@ -1662,6 +1697,11 @@ export interface MyReportResponse {
 }
 
 export interface ReportItemInput {
+  roundId?: Uuid;
+  planRevisionId?: Uuid;
+  submissionId?: Uuid | null;
+  evidence?: EvidenceItem[];
+  resultNote?: string | null;
   taskId: Uuid;
   declaredResult: CheckpointTaskResult;
   riskLevel: ReportRiskLevel;
@@ -2499,7 +2539,9 @@ export interface ApiEndpoints {
   // ── Tasks / plans / rounds ──
   'GET /groups/{groupId}/tasks': EndpointDef<GroupP, ListTasksQuery, N, Page<TaskSummary>>;
   'POST /groups/{groupId}/tasks': EndpointDef<GroupP, N, CreateTaskRequest, TaskDetail>;
-  'GET /tasks/{taskId}': EndpointDef<{ taskId: Uuid }, N, N, TaskDetail>;
+  'GET /tasks/{taskId}': EndpointDef<{ taskId: Uuid }, { roundId?: Uuid }, N, TaskDetail>;
+  'POST /groups/{groupId}/plans/submit': EndpointDef<GroupP, N, SubmitPlanBatchRequest, SubmitPlanBatchResponse>;
+  'POST /plans/{planId}/cancel': EndpointDef<{ planId: Uuid }, N, VersionedRequest, PlanMutationResponse>;
   'GET /tasks/{taskId}/history': EndpointDef<{ taskId: Uuid }, PageQuery, N, Page<TaskHistoryEntry>>;
   'PATCH /plans/{planId}': EndpointDef<{ planId: Uuid }, N, UpdatePlanRequest, PlanMutationResponse>;
   'POST /plans/{planId}/submit': EndpointDef<{ planId: Uuid }, N, VersionedRequest, PlanMutationResponse>;
@@ -2519,7 +2561,7 @@ export interface ApiEndpoints {
   'GET /groups/{groupId}/checkpoint-cycles/{cycleId}/review-queue': EndpointDef<CycleP, N, N, ReviewQueueResponse>;
 
   // ── Checkpoint reports ──
-  'GET /groups/{groupId}/checkpoint-cycles/{cycleId}/my-report': EndpointDef<CycleP, N, N, MyReportResponse>;
+  'GET /groups/{groupId}/checkpoint-cycles/{cycleId}/my-report': EndpointDef<CycleP, { revisionNo?: number }, N, MyReportResponse>;
   'PUT /groups/{groupId}/checkpoint-cycles/{cycleId}/my-report': EndpointDef<CycleP, N, SaveReportRequest, MyReportResponse>;
   'POST /groups/{groupId}/checkpoint-cycles/{cycleId}/my-report/submit': EndpointDef<CycleP, N, SubmitReportRequest, MyReportResponse>;
 
@@ -2570,11 +2612,6 @@ export type EndpointKey = keyof ApiEndpoints;
 
 /** Endpoint BẮT BUỘC header `Idempotency-Key` (thiếu → 400 IDEMPOTENCY_KEY_REQUIRED). FE client tự thêm khóa cho các endpoint này. */
 export const IDEMPOTENCY_REQUIRED: readonly EndpointKey[] = [
-  'POST /plans/{planId}/review',
-  'POST /task-rounds/{roundId}/submissions',
-  'POST /task-submissions/{submissionId}/review',
-  'POST /task-rounds/{roundId}/carryover',
-  'POST /groups/{groupId}/checkpoint-cycles/{cycleId}/my-report/submit',
   'POST /groups/{groupId}/help-requests',
   'POST /help-requests/{helpRequestId}/accept-offer',
   'POST /support-works/{workId}/submissions',
@@ -2585,6 +2622,12 @@ export const IDEMPOTENCY_REQUIRED: readonly EndpointKey[] = [
 
 /** Endpoint nên gửi `Idempotency-Key` (server tôn trọng nếu có). */
 export const IDEMPOTENCY_RECOMMENDED: readonly EndpointKey[] = [
+  'POST /plans/{planId}/review',
+  'POST /groups/{groupId}/plans/submit',
+  'POST /task-rounds/{roundId}/submissions',
+  'POST /task-submissions/{submissionId}/review',
+  'POST /task-rounds/{roundId}/carryover',
+  'POST /groups/{groupId}/checkpoint-cycles/{cycleId}/my-report/submit',
   'POST /groups',
   'POST /groups/{groupId}/checkpoint-schedules',
   'POST /plans/{planId}/submit',

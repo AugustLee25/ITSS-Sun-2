@@ -28,8 +28,9 @@ public class ReportController {
 	}
 
 	@GetMapping("/my-report")
-	Map<String, Object> get(@PathVariable UUID groupId, @PathVariable UUID cycleId, CurrentUser user) {
-		return reports.view(groupId, cycleId, user);
+	Map<String, Object> get(@PathVariable UUID groupId, @PathVariable UUID cycleId, CurrentUser user,
+			@RequestParam(required = false) Integer revisionNo) {
+		return reports.view(groupId, cycleId, user, revisionNo);
 	}
 
 	@PutMapping("/my-report")
@@ -40,8 +41,9 @@ public class ReportController {
 
 	@PostMapping("/my-report/submit")
 	Map<String, Object> submit(@PathVariable UUID groupId, @PathVariable UUID cycleId, CurrentUser user,
-			@RequestBody ReportService.SubmitReportRequest body) {
-		return reports.submit(groupId, cycleId, user, body);
+			@RequestBody ReportService.SubmitReportRequest body,
+			@org.springframework.web.bind.annotation.RequestHeader(value = "Idempotency-Key", required = false) String key) {
+		return reports.submit(groupId, cycleId, user, body, key);
 	}
 
 	@GetMapping("/lead-summary")
