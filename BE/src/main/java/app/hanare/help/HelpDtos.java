@@ -1,5 +1,6 @@
 package app.hanare.help;
 
+import app.hanare.common.TrimmedSize;
 import app.hanare.points.PointAmount;
 import app.hanare.points.PointDtos.ContributionDto;
 import app.hanare.points.PointDtos.EvidenceItem;
@@ -28,13 +29,13 @@ public final class HelpDtos {
 	// ------------------------------------------------------------------------------------------------ request
 
 	public record CreateHelpRequestRequest(@NotNull UUID taskId, @NotNull UUID beneficiaryId, UUID supportRequestId,
-			@NotNull @Size(min = 3, max = 120) String title, @NotNull @Size(min = 10, max = 2000) String description,
+			@NotNull @TrimmedSize(min = 3, max = 120) String title, @NotNull @TrimmedSize(min = 10, max = 2000) String description,
 			@Size(max = 4000) String expectedOutput, Integer estimatedEffortMinutes, @Size(max = 1000) String skillNotes,
 			@NotNull Boolean privacyChecked) {
 	}
 
-	public record UpdateHelpRequestRequest(@Size(min = 3, max = 120) String title,
-			@Size(min = 10, max = 2000) String description, @Size(max = 4000) String expectedOutput,
+	public record UpdateHelpRequestRequest(@TrimmedSize(min = 3, max = 120) String title,
+			@TrimmedSize(min = 10, max = 2000) String description, @Size(max = 4000) String expectedOutput,
 			Integer estimatedEffortMinutes, @Size(max = 1000) String skillNotes, @NotNull Long version) {
 	}
 
@@ -51,18 +52,18 @@ public final class HelpDtos {
 	public record AcceptOfferRequest(@NotNull UUID offerId, @NotNull Long version) {
 	}
 
-	public record SubmitSupportResultRequest(@NotNull @Size(min = 10, max = 1000) String resultNote,
+	public record SubmitSupportResultRequest(@NotNull @TrimmedSize(min = 10, max = 1000) String resultNote,
 			@Valid List<EvidenceInput> evidence, Integer actualMinutes) {
 	}
 
 	public record EvidenceInput(String type, @NotBlank @Size(max = 2048) String url, @Size(max = 200) String label) {
 	}
 
-	public record ReportUnableRequest(@NotNull @Size(min = 5, max = 1000) String reason, @NotNull Long version) {
+	public record ReportUnableRequest(@NotNull @TrimmedSize(min = 5, max = 1000) String reason, @NotNull Long version) {
 	}
 
 	public record ResolveDiscussionRequest(@NotNull SupportWorkResolution resolution,
-			@NotNull @Size(min = 5, max = 1000) String note, @NotNull Long version) {
+			@NotNull @TrimmedSize(min = 5, max = 1000) String note, @NotNull Long version) {
 	}
 
 	// ------------------------------------------------------------------------------------------------ response

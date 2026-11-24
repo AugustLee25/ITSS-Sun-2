@@ -22,3 +22,6 @@ Thumbs.db
 # Claude Code local files
 .claude/settings.local.json
 .claude/scratchpad/
+
+# Harness: báo cáo sinh tự động mỗi lần chạy
+harness/reports/

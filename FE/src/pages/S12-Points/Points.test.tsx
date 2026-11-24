@@ -59,7 +59,7 @@ const routes = (me: MyPointsResponse | (() => unknown), extra: ApiRoute[] = []):
 ]
 
 describe('S12 — Điểm của tôi', () => {
-  it('phân biệt "Đã xác nhận 0" với "Có thể đạt 14"; chuyển đi/nhận thêm không cộng vào tổng; danh sách task có điểm', async () => {
+  it('[S2-D7] phân biệt "Đã xác nhận 0" với "Có thể đạt 14"; chuyển đi/nhận thêm không cộng vào tổng; danh sách task có điểm', async () => {
     mockApi(routes(myPoints()))
     renderApp(P)
 
@@ -77,7 +77,9 @@ describe('S12 — Điểm của tôi', () => {
     const taskLink = await screen.findByRole('link', { name: 'Thiết kế API' })
     expect(taskLink).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks/task-9`)
     expect(within(taskLink.closest('li') as HTMLElement).getByText('Nhận làm thay')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Xem phần việc hỗ trợ' })).toHaveAttribute('href', `/groups/${GROUP_ID}/help/help-1/work`)
+    // [S2-D7] task nhận làm thay chưa được nghiệm thu: điểm CHƯA tính, link mở thẳng task (không có màn hỗ trợ riêng)
+    expect(within(taskLink.closest('li') as HTMLElement).getByText('Chưa tính điểm — chờ nghiệm thu')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Mở task' })).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks/task-9`)
   })
 
   it('chưa có phương án điểm → "Chưa có phương án điểm đã duyệt", không tải danh sách/mô phỏng', async () => {
@@ -202,7 +204,7 @@ describe('S12 — Lịch sử & quỹ nhóm', () => {
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByRole('link', { name: 'PR #9' })).toBeInTheDocument()
     expect(within(dialog).getByText('Chấp nhận')).toBeInTheDocument()
-    expect(within(dialog).getByRole('link', { name: 'Xem phần việc hỗ trợ' })).toHaveAttribute('href', `/groups/${GROUP_ID}/help/work-1/work`)
+    expect(within(dialog).queryByRole('link', { name: 'Xem phần việc hỗ trợ' })).not.toBeInTheDocument() // không còn màn My Support Work
     await user.click(within(dialog).getByRole('button', { name: 'Đóng' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })

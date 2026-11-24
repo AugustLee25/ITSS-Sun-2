@@ -3,6 +3,7 @@ package app.hanare.auth;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
@@ -16,8 +17,9 @@ public final class AuthDtos {
 	public record RegisterRequest(
 			@NotBlank(message = "Nhập tên của bạn.") @Size(max = 80, message = "Tên tối đa 80 ký tự.") String name,
 			@NotBlank(message = "Nhập email.") @Email(message = "Email không hợp lệ.")
+			@Pattern(regexp = "^[^@\\s]+@[^@\\s]+\\.[^@\\s.]{2,}$", message = "Email không hợp lệ.")
 			@Size(max = 254, message = "Email tối đa 254 ký tự.") String email,
-			@NotNull(message = "Nhập mật khẩu.") @Size(min = 8, max = 72, message = "Mật khẩu dài 8–72 ký tự.") String password) {
+			@NotBlank(message = "Nhập mật khẩu.") @Size(min = 8, max = 72, message = "Mật khẩu dài 8–72 ký tự.") String password) {
 
 		/** Khoảng trắng thừa quanh email không làm đăng ký thất bại (email được chuẩn hóa chữ thường ở service). */
 		public RegisterRequest {

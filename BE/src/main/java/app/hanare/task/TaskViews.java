@@ -102,7 +102,8 @@ public class TaskViews {
 				 WHERE i.round_id IN (:ids) AND r.status = 'SUBMITTED'
 				""").param("ids", roundIds).query(UUID.class).list());
 		Map<UUID, UUID> works = new HashMap<>();
-		jdbc.sql("SELECT h.task_id, w.id FROM support_works w JOIN help_requests h ON h.id = w.help_request_id WHERE h.task_id IN (:ids) AND w.status <> 'APPROVED'")
+		// Work của yêu cầu đã CANCELLED (TL hoàn trả/mở lại) không còn "giữ" task: người thực hiện hiện tại nộp như task thường.
+		jdbc.sql("SELECT h.task_id, w.id FROM support_works w JOIN help_requests h ON h.id = w.help_request_id WHERE h.task_id IN (:ids) AND w.status <> 'APPROVED' AND h.status <> 'CANCELLED'")
 				.param("ids", taskIds).query((rs, i) -> { works.put(J.uuid(rs, "task_id"), J.uuid(rs, "id")); return 0; }).list();
 		return new Extras(points, help, risk, reported, works);
 	}
@@ -179,8 +180,8 @@ public class TaskViews {
 		if (executing && isExec) {
 			a.add("UPDATE_PROGRESS");
 		}
-		if (eff != null && active && isExec && !closed && !x.reported().contains(c.round().id())
-				&& !x.supportWorks().containsKey(c.round().taskId()) && open == null) a.add("SUBMIT_RESULT");
+		// Helper (người thực hiện hiện tại sau bàn giao) cũng nộp bằng popup này — Solution 2 không có màn nộp riêng.
+		if (eff != null && active && isExec && !closed && !x.reported().contains(c.round().id()) && open == null) a.add("SUBMIT_RESULT");
 		if (eff != null && isExec && !finished && cyc.reportWindowOpen(now)) {
 			a.add("REPORT_CHECKPOINT");
 		}
@@ -446,6 +447,11 @@ public class TaskViews {
 		m.put("lastProgress", lastProgress(s, c.round().id()));
 		m.put("helpRequestId", x.openHelp().get(c.round().taskId()));
 		m.put("supportWorkId", x.supportWorks().get(c.round().taskId()));
+		// Lịch sử bàn giao (Solution 2): work gần nhất của task kể cả đã nghiệm thu/hoàn trả — không có màn "My Support Work".
+		m.put("lastSupportWorkId", jdbc.sql("""
+				SELECT w.id FROM support_works w JOIN help_requests h ON h.id = w.help_request_id
+				 WHERE h.task_id = :t ORDER BY w.created_at DESC, w.id LIMIT 1
+				""").param("t", c.round().taskId()).query(UUID.class).optional().orElse(null));
 		m.put("carryoverProposal", !v.lead() && !v.id().equals(c.executor()) ? null : jdbc.sql("""
 				SELECT i.id, i.expected_completion_at, i.note FROM checkpoint_report_items i JOIN checkpoint_reports rep ON rep.id=i.report_id
 				 WHERE i.round_id=:r AND rep.status='SUBMITTED' ORDER BY rep.revision_no DESC LIMIT 1

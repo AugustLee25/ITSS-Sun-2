@@ -3,7 +3,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 import { useCreateHelpRequest } from '@/api/help'
 import { applyFieldErrors, isApiError } from '@/api/errors'
-import { useTasks } from '@/api/tasks'
+import { useTask, useTaskPages } from '@/api/tasks'
 import { TaskStatus } from '@/api/types'
 import { paths } from '@/app/routes'
 import { Button, FormField, InlineError, Input, Modal, Select, Textarea, UnsavedChangesGuard, useToast } from '@/components'
@@ -41,8 +41,18 @@ export function CreateHelpDialog({
   const toast = useToast()
   const navigate = useNavigate()
   const create = useCreateHelpRequest(groupId)
-  const tasks = useTasks(groupId, { size: 100 })
-  const options = (tasks.data?.items ?? []).filter((task) => POSTABLE.has(task.taskStatus) && !task.hasOpenHelpRequest)
+  // T-03: chỉ tải task CHƯA hoàn thành (server lọc), cho phép tải thêm trang, và luôn tra riêng task được chọn sẵn theo id
+  // — nhóm lớn không còn làm task muộn/quá hạn "biến mất" khỏi danh sách chọn.
+  const [pageCount, setPageCount] = useState(1)
+  const pages = useTaskPages(groupId, { size: 100, completion: 'UNFINISHED' }, pageCount)
+  const lastPage = pages[pages.length - 1]?.data
+  const hasMore = !!lastPage && lastPage.page + 1 < lastPage.totalPages
+  const loadingMore = pages.some((p) => p.isFetching)
+  const tasksFailed = pages.some((p) => p.isError)
+  const preselected = useTask(initialTaskId ?? '')
+  const loaded = pages.flatMap((p) => p.data?.items ?? [])
+  const merged = preselected.data && !loaded.some((item) => item.id === preselected.data.id) ? [preselected.data, ...loaded] : loaded
+  const options = merged.filter((task) => POSTABLE.has(task.taskStatus) && !task.hasOpenHelpRequest)
   const form = useForm<Values>({
     defaultValues: { taskId: initialTaskId ?? '', title: '', description: '', expectedOutput: '', effort: '', skillNotes: '', privacyChecked: false },
   })
@@ -99,7 +109,7 @@ export function CreateHelpDialog({
     >
       <UnsavedChangesGuard when={form.formState.isDirty && !createdId} />
       <form id="help-form" noValidate onSubmit={(event) => void submit(event)} className={styles.stack}>
-        <FormField label={t('fields.task')} required error={errors.taskId?.message} hint={tasks.isError ? t('helpBoard.tasksFailed') : undefined}>
+        <FormField label={t('fields.task')} required error={errors.taskId?.message} hint={tasksFailed ? t('helpBoard.tasksFailed') : undefined}>
           <Select key={options.length} {...form.register('taskId', { required: t('helpBoard.errTask') })}>
             <option value="">{t('helpBoard.chooseTask')}</option>
             {options.map((item) => (
@@ -109,6 +119,11 @@ export function CreateHelpDialog({
             ))}
           </Select>
         </FormField>
+        {hasMore ? (
+          <Button variant="ghost" loading={loadingMore} onClick={() => setPageCount((count) => count + 1)}>
+            {t('helpBoard.loadMoreTasks')}
+          </Button>
+        ) : null}
         {task ? (
           <p className={styles.preview} role="status">
             {task.points

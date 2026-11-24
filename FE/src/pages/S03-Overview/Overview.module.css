@@ -292,3 +292,59 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+/* Solution 2 · L1 — bảng toàn bộ task của Member (TL). Màu luôn đi kèm nhãn chữ; đỏ/vàng PASTEL, chữ đậm đạt WCAG AA. */
+.boardGroup {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.boardHeading {
+  margin: 0;
+  font-size: var(--font-size-h3);
+}
+
+.boardRow {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+}
+
+.rowRed {
+  border-color: var(--color-error-border);
+}
+
+.rowYellow {
+  border-color: var(--color-warning-border);
+}
+
+.boardTitle {
+  justify-self: start;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-input);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-link);
+}
+
+/* tên task bằng đỏ pastel khi quá hạn */
+.titleRed {
+  background: var(--color-error-soft);
+  color: var(--color-error-text);
+}
+
+/* vàng pastel khi Member đã bấm `Cần giúp đỡ` */
+.titleYellow {
+  background: var(--color-warning-soft);
+  color: var(--color-warning-text);
+}
+
+.boardActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

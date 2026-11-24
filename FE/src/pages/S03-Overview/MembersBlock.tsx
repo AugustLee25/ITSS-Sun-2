@@ -3,10 +3,12 @@ import { useMemberProgress } from '@/api/dashboard'
 import type { CycleTaskRow, MemberProgress } from '@/api/types'
 import { paths } from '@/app/routes'
 import { useCurrentUser } from '@/app/auth/authContext'
+import { useGroup } from '@/app/group/groupContext'
 import { BottomSheet, EmptyState, InlineError, LoadingSkeleton, MemberStatusFrame, StatusChip, useStatusChip } from '@/components'
 import { useT, type MessageKey } from '@/i18n'
 import { useFormatters } from '@/lib/timeZoneContext'
 import { Section } from './blocks'
+import { MemberTaskBoard } from './MemberTaskBoard'
 import styles from './Overview.module.css'
 
 /** Dòng tóm tắt số liệu của khung tên: số task đến hạn/hoàn thành/trễ/thiếu báo cáo (spec 0.6, S03 #5). */
@@ -70,6 +72,7 @@ function MemberSheet({ groupId, userId, cycleId, onClose }: { groupId: string; u
   const query = useMemberProgress(groupId, userId, cycleId)
   const detail = query.data
   const evaluation = detail?.progress.evaluation
+  const { isLeader } = useGroup()
   return (
     <BottomSheet
       open
@@ -106,7 +109,10 @@ function MemberSheet({ groupId, userId, cycleId, onClose }: { groupId: string; u
               })}
             </p>
           ) : null}
-          {detail.tasks.length === 0 ? (
+          {isLeader ? (
+            // Solution 2 · L1: TL thấy TOÀN BỘ task của Member (quá hạn/cần hỗ trợ lên đầu, DONE cuối) và `Đưa lên Workspace`.
+            <MemberTaskBoard groupId={groupId} userId={userId} />
+          ) : detail.tasks.length === 0 ? (
             <EmptyState compact headingLevel={3} icon="tasks" title={t('overview.memberSheetEmpty')} />
           ) : (
             <ul className={styles.stack}>

@@ -26,6 +26,7 @@ import { HistorySection } from './HistorySection'
 import { PlanSection } from './PlanSection'
 import { IndependentReviewer, ReviewPanel } from './ReviewPanel'
 import { SubmissionsSection } from './SubmissionsSection'
+import { SupportWorkSection } from './support/SupportWorkSection'
 import styles from './TaskDetail.module.css'
 
 /** Task không còn/không xem được: về danh sách S04 kèm thông báo (spec mục 5: "Task bị xóa → S04 + toast"). */
@@ -210,6 +211,7 @@ export default function S05TaskDetail() {
   const plan = chip('plan', task.planStatus)
   const execution = chip('task', task.taskStatus)
   const reviewTarget = task.submissions.find((submission) => submission.isReviewTarget && !submission.review)
+  const takeover = task.originalAssignee.userId !== task.currentExecutor.userId
 
   return (
     <>
@@ -221,6 +223,7 @@ export default function S05TaskDetail() {
           <div className={styles.labels}>
             <StatusChip tone={plan.tone} label={t('tasks.card.plan', { status: plan.label })} />
             <StatusChip tone={execution.tone} label={t('tasks.card.execution', { status: execution.label })} />
+            {takeover ? <StatusChip tone="info" icon="users" label={t('handoff.badge')} /> : null}
           </div>
         }
       />
@@ -229,6 +232,7 @@ export default function S05TaskDetail() {
         {task.isHistorical ? <p>{t('workflow.historical')} · <ButtonLink to={paths.task(groupId, task.id)}>{t('workflow.current')}</ButtonLink></p> : null}
       <InfoBlock task={task} />
         <ExecutionActions task={task} onCarryover={() => setCarryoverOpen(true)} />
+        <SupportWorkSection task={task} />
         {allowed.has(TaskAction.REVIEW_RESULT) && reviewTarget ? <ReviewPanel key={reviewTarget.id} task={task} target={reviewTarget} /> : null}
         {allowed.has(TaskAction.DESIGNATE_REVIEWER) ? (
           <Card as="section" className={styles.block}>

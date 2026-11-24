@@ -1,5 +1,6 @@
 package app.hanare.group;
 
+import app.hanare.common.TrimmedSize;
 import app.hanare.schedule.ScheduleDtos.CheckpointCycleDto;
 import app.hanare.schedule.ScheduleDtos.CheckpointScheduleDto;
 import app.hanare.schedule.ScheduleDtos.ScheduleInput;
@@ -28,7 +29,7 @@ public final class GroupDtos {
 	}
 
 	public record CreateGroupRequest(
-			@NotNull(message = "Nhập tên nhóm.") @Size(min = 3, max = 80, message = "Tên nhóm dài 3–80 ký tự.") String name,
+			@NotNull(message = "Nhập tên nhóm.") @TrimmedSize(min = 3, max = 80, message = "Tên nhóm dài 3–80 ký tự.") String name,
 			@Size(max = 120, message = "Tên môn tối đa 120 ký tự.") String courseName,
 			LocalDate startDate,
 			@NotNull(message = "Chọn deadline chung của nhóm.") LocalDate deadline,

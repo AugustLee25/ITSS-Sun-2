@@ -1,19 +1,9 @@
-import type { ReactNode } from 'react'
-import { Link, useParams } from 'react-router'
-import { hasStatus } from '@/api/errors'
-import { useSupportWork, useSupportWorkRef } from '@/api/supportWork'
+import { Link } from 'react-router'
 import { TaskReviewDecision, type EvidenceItem, type SupportTimelineKind, type SupportWork } from '@/api/types'
-import { ForbiddenState, NotFoundState } from '@/app/ErrorPages'
-import { useGroup } from '@/app/group/groupContext'
 import { paths } from '@/app/routes'
 import {
-  ButtonLink,
   Card,
-  EmptyState,
-  InlineError,
-  LoadingSkeleton,
   MetaList,
-  PageHeader,
   PointsText,
   StatusChip,
   type StatusTone,
@@ -23,60 +13,7 @@ import {
 import { useT, type MessageKey } from '@/i18n'
 import { useFormatters } from '@/lib/timeZoneContext'
 import { formatMinutes } from './formatMinutes'
-import styles from './HelpWork.module.css'
-
-/**
- * Tải phần việc cho S10/S11: địa chỉ là `/help/:helpRequestId/...` (hoặc `workId` từ thông báo).
- * Gói sẵn skeleton, lỗi 403/404, thử lại và trạng thái "yêu cầu chưa có người nhận".
- */
-export function WorkGate({ screen, children }: { screen: 'S10' | 'S11'; children: (work: SupportWork) => ReactNode }) {
-  const t = useT()
-  const { helpRequestId = '' } = useParams()
-  const { groupId } = useGroup()
-  const ref = useSupportWorkRef(helpRequestId)
-  const workId = ref.data?.workId ?? null
-  const work = useSupportWork(workId)
-  const header = <PageHeader title={t(`screens.${screen}`)} backTo={paths.help(groupId)} />
-
-  if (ref.isPending || (workId && work.isPending)) {
-    return (
-      <>
-        {header}
-        <LoadingSkeleton variant="list" count={3} label={t('states.loading')} />
-      </>
-    )
-  }
-  const error = ref.error ?? work.error
-  if (error) {
-    if (hasStatus(error, 404)) return <NotFoundState homeHref={paths.help(groupId)} homeLabel={t('nav.help')} />
-    if (hasStatus(error, 403)) return <ForbiddenState />
-    return (
-      <>
-        {header}
-        <InlineError
-          error={error}
-          title={t('supportWork.loadError')}
-          onRetry={() => void (ref.error ? ref.refetch() : work.refetch())}
-        />
-      </>
-    )
-  }
-  if (!workId) {
-    return (
-      <>
-        {header}
-        <EmptyState
-          icon="help"
-          title={t('supportWork.noWork.title')}
-          description={t('supportWork.noWork.description')}
-          action={<ButtonLink to={paths.helpRequest(groupId, helpRequestId)}>{t('supportWork.noWork.cta')}</ButtonLink>}
-        />
-      </>
-    )
-  }
-  if (!work.data || work.data.groupId !== groupId) return <NotFoundState homeHref={paths.help(groupId)} homeLabel={t('nav.help')} />
-  return <>{children(work.data)}</>
-}
+import styles from './SupportWork.module.css'
 
 const TIMELINE_TONES: Record<SupportTimelineKind, StatusTone> = {
   OFFER_ACCEPTED: 'info',
@@ -126,7 +63,7 @@ export function WorkInfo({ work }: { work: SupportWork }) {
           <PointsText>{f.pointsLabel(work.points)}</PointsText>
           <StatusChip
             tone={work.pointRecorded ? 'success' : 'neutral'}
-            label={work.pointRecorded ? t('supportWork.info.recorded') : t('supportWork.info.notRecorded')}
+            label={work.pointRecorded ? t('supportWork.info.recorded') : t('handoff.pendingNoPoints')}
             icon={work.pointRecorded ? 'check' : 'clock'}
             size="sm"
           />

@@ -62,14 +62,19 @@ const offer: SupportOffer = {
 const setup = (role: GroupRole, routes: ApiRoute[]) => mockApi([...routes, ...shellRoutes(role === GroupRole.LEAD ? MINH : BINH, role)])
 
 describe('S08 — Bảng hỗ trợ', () => {
-  it('Member: thẻ hiện điểm do server trả, không có nút đăng; gửi đề nghị riêng qua TL', async () => {
+  it('[S2-C1][S2-C3] Member: thẻ hiện đủ tên, phạm vi, đầu ra, deadline, độ khó, điểm P_t, trạng thái; không có nút đăng; gửi đề nghị riêng qua TL', async () => {
     const api = setup(GroupRole.MEMBER, [['GET', `/groups/${GROUP_ID}/help-requests`, page([card])]])
     renderApp(`/groups/${GROUP_ID}/help`)
 
     expect(await screen.findByRole('link', { name: 'Thiết kế API (toàn bộ task)' })).toHaveAttribute('href', `/groups/${GROUP_ID}/help/hr-1`)
     expect(screen.getByText('+10,0000 điểm % khi TL duyệt')).toBeInTheDocument()
     expect(screen.getByText('Đang tìm người nhận làm thay toàn bộ task')).toBeInTheDocument()
+    expect(screen.getByText('Hoàn thiện 12 endpoint nhóm/task')).toBeInTheDocument() // mô tả/phạm vi
+    expect(screen.getByText('OpenAPI + 12 endpoint chạy được')).toBeInTheDocument() // đầu ra
+    expect(screen.getAllByText('Khó').length).toBeGreaterThan(0) // độ khó
+    expect(document.querySelector('time[datetime="2026-11-27T13:00:00Z"]')).not.toBeNull() // deadline
     expect(screen.queryByRole('button', { name: 'Đăng yêu cầu' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Đăng yêu cầu|Đưa lên Workspace/ })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Gửi đề nghị cho TL' })).toBeInTheDocument()
     expect(api.calls.find((c) => c.path.endsWith('/help-requests'))?.search.get('tab')).toBe('OPEN')
 
@@ -112,7 +117,7 @@ describe('S08 — Bảng hỗ trợ', () => {
 })
 
 describe('S09 — Chi tiết yêu cầu hỗ trợ', () => {
-  it('Member: đề nghị tự nguyện — phải xác nhận đã xem phạm vi; gửi kèm version; điểm chỉ "khi TL duyệt"', async () => {
+  it('[S2-C5][S2-C4] Member: đề nghị tự nguyện — phải xác nhận đã xem phạm vi; gửi kèm version; điểm chỉ "khi TL duyệt"; không có nút "Nhận việc ngay"', async () => {
     const api = setup(GroupRole.MEMBER, [
       ['GET', '/help-requests/hr-1', detail()],
       ['POST', '/help-requests/hr-1/offers', offer],
@@ -126,9 +131,12 @@ describe('S09 — Chi tiết yêu cầu hỗ trợ', () => {
     expect(screen.getByRole('link', { name: 'Xem ảnh hưởng đến điểm của tôi' })).toHaveAttribute('href', `/groups/${GROUP_ID}/points`)
     expect(screen.queryByRole('button', { name: 'Chấp thuận' })).not.toBeInTheDocument()
     expect(screen.queryByText(/đã cộng/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Nhận việc ngay/i })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Mình có thể hỗ trợ' }))
     const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText(/Điểm chỉ được ghi sau khi TL duyệt kết quả bàn giao/)).toBeInTheDocument() // điều kiện nghiệm thu
+    expect(within(dialog).getByText(/Gửi đề nghị chưa có nghĩa là bạn đã nhận việc/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: 'Gửi đề nghị' }))
     expect(within(dialog).getByText('Hãy xác nhận bạn đã xem phạm vi trước khi gửi')).toBeInTheDocument()
     expect(api.writes('POST', '/help-requests/hr-1/offers')).toHaveLength(0)
@@ -139,7 +147,7 @@ describe('S09 — Chi tiết yêu cầu hỗ trợ', () => {
     expect(api.writes('POST', '/help-requests/hr-1/offers')[0].body).toEqual({ message: null, acknowledgedScope: true, helpRequestVersion: 2 })
   })
 
-  it('Member đã đề nghị: hiện trạng thái chờ và rút đề nghị không cần lý do', async () => {
+  it('[S2-C4] Member đã đề nghị: hiện trạng thái chờ và rút đề nghị không cần lý do', async () => {
     const api = setup(GroupRole.MEMBER, [
       ['GET', '/help-requests/hr-1', detail({ allowedActions: ['WITHDRAW_OFFER'], myOffer: offer, myOfferStatus: 'PENDING' })],
       ['POST', '/support-offers/off-1/withdraw', { ...offer, status: 'WITHDRAWN' }],
@@ -151,16 +159,17 @@ describe('S09 — Chi tiết yêu cầu hỗ trợ', () => {
     expect(api.writes('POST', '/support-offers/off-1/withdraw')[0].body).toBeUndefined()
   })
 
-  it('TL chọn Helper: xác nhận phạm vi rồi gọi accept-offer (Idempotency-Key + version)', async () => {
+  it('[S2-C6][S2-C8] TL chọn Helper: có `Chấp thuận`/`Không chọn`; xác nhận rồi gọi accept-offer (Idempotency-Key + version) và về CHÍNH task, không sang màn thực hiện riêng', async () => {
     const api = setup(GroupRole.LEAD, [
       ['GET', '/help-requests/hr-1', detail({ allowedActions: ['ACCEPT_OFFER', 'CANCEL'], offers: [offer], myRoleInRequest: 'REQUESTER' })],
       ['POST', '/help-requests/hr-1/accept-offer', detail({ status: 'IN_PROGRESS', allowedActions: ['OPEN_WORK'] })],
     ])
     const user = userEvent.setup()
-    renderApp(`/groups/${GROUP_ID}/help/hr-1`)
+    const { router } = renderApp(`/groups/${GROUP_ID}/help/hr-1`)
 
     expect(await screen.findByText('Bình')).toBeInTheDocument()
     expect(screen.getByText('Mình rảnh tối nay')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Không chọn' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Chấp thuận' }))
     const confirm = await screen.findByRole('alertdialog')
     await user.click(within(confirm).getByRole('button', { name: 'Chấp thuận' }))
@@ -169,6 +178,18 @@ describe('S09 — Chi tiết yêu cầu hỗ trợ', () => {
     const call = api.writes('POST', '/help-requests/hr-1/accept-offer')[0]
     expect(call.headers.get('Idempotency-Key')).toBeTruthy()
     expect(call.body).toEqual({ offerId: 'off-1', version: 2 })
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/groups/${GROUP_ID}/tasks/task-1`))
+    expect(router.state.location.pathname.endsWith('/work')).toBe(false)
+  })
+
+  it('[S2-C6] `Không chọn` chỉ ẩn đề nghị khỏi danh sách đang xem: không gọi API, không ghi nhận gì cho người đề nghị', async () => {
+    const api = setup(GroupRole.LEAD, [['GET', '/help-requests/hr-1', detail({ allowedActions: ['ACCEPT_OFFER', 'CANCEL'], offers: [offer], myRoleInRequest: 'REQUESTER' })]])
+    const user = userEvent.setup()
+    renderApp(`/groups/${GROUP_ID}/help/hr-1`)
+    await screen.findByText('Bình')
+    await user.click(screen.getByRole('button', { name: 'Không chọn' }))
+    expect(screen.queryByText('Mình rảnh tối nay')).not.toBeInTheDocument()
+    expect(api.calls.filter((call) => call.method !== 'GET')).toHaveLength(0)
   })
 
   it('người nhận sau khi yêu cầu đã có người: thông báo "Yêu cầu đã có người hỗ trợ" và nút quay lại danh sách', async () => {

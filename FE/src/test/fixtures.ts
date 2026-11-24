@@ -29,6 +29,9 @@ import {
   type Invite,
   type Member,
   type MemberProgress,
+  type MemberTaskBoard,
+  type MemberTaskBoardRow,
+  type MemberTaskSection,
   type PlanRevision,
   type TaskDetail,
   type TaskRound,
@@ -379,3 +382,40 @@ export const dashboard = (role: GroupRole = GroupRole.MEMBER, overrides: Partial
   flags: { groupHasAnyTask: true, iHaveAnyTask: true },
   ...overrides,
 })
+
+// ───────────── Solution 2 · bảng toàn bộ task của Member (TL) ─────────────
+
+/** Một dòng của bảng task theo Member; cờ suy ra từ `section` giống cách server tính. */
+export const boardRow = (
+  section: MemberTaskSection,
+  task: Partial<TaskSummary> = {},
+  overrides: Partial<MemberTaskBoardRow> = {},
+): MemberTaskBoardRow => ({
+  task: taskSummary({ id: `t-${section.toLowerCase()}`, title: `Task ${section}`, currentExecutor: BINH, originalAssignee: BINH, ...task }),
+  section,
+  overdue: section === 'OVERDUE',
+  needsHelp: section === 'NEEDS_HELP',
+  awaitingReview: section === 'AWAITING_REVIEW',
+  done: section === 'DONE',
+  supportRequestId: section === 'NEEDS_HELP' ? 'sr-1' : null,
+  supportRequestStatus: section === 'NEEDS_HELP' ? 'OPEN' : null,
+  helpRequestId: null,
+  helpRequestStatus: null,
+  canPublishToWorkspace: section !== 'DONE' && section !== 'AWAITING_REVIEW',
+  publishBlockedCode: null,
+  publishBlockedMessage: null,
+  ...overrides,
+});
+
+export const memberBoard = (rows: MemberTaskBoardRow[], member: UserRef = BINH): MemberTaskBoard => ({
+  member,
+  serverTime: '2026-11-19T20:00:00Z',
+  counts: {
+    OVERDUE: rows.filter((r) => r.section === 'OVERDUE').length,
+    NEEDS_HELP: rows.filter((r) => r.section === 'NEEDS_HELP').length,
+    ACTIVE: rows.filter((r) => r.section === 'ACTIVE').length,
+    AWAITING_REVIEW: rows.filter((r) => r.section === 'AWAITING_REVIEW').length,
+    DONE: rows.filter((r) => r.section === 'DONE').length,
+  },
+  tasks: rows,
+});

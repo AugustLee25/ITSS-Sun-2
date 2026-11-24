@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { dashboardKeyPrefix } from './dashboard'
 import { useIdempotentMutation } from './idempotentMutation'
@@ -74,6 +74,19 @@ export function useTasks(groupId: string, query: ListTasksQuery) {
     queryFn: ({ signal }) => api.get<Page<TaskSummary>>(`/groups/${enc(groupId)}/tasks`, { signal, query: { ...query } }),
     enabled: !!groupId,
     staleTime: 15_000,
+  })
+}
+
+/** Tải `pageCount` trang đầu của cùng một truy vấn (dùng khi cần nhiều hơn một trang, ví dụ chọn task ở form đăng). */
+export function useTaskPages(groupId: string, query: ListTasksQuery, pageCount: number) {
+  return useQueries({
+    queries: Array.from({ length: pageCount }, (_, page) => ({
+      queryKey: taskKeys.list(groupId, { ...query, page }),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        api.get<Page<TaskSummary>>(`/groups/${enc(groupId)}/tasks`, { signal, query: { ...query, page } }),
+      enabled: !!groupId,
+      staleTime: 15_000,
+    })),
   })
 }
 

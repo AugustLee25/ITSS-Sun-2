@@ -9,10 +9,11 @@ import { isoToZonedInput, zonedTimeToIso } from '@/lib/zonedTime'
 import { isApiError } from '@/api/errors'
 import { taskKeys, useReviewPreview, useReviewResult, useSetIndependentReviewer } from '@/api/tasks'
 import { ErrorCode, GroupRole, TaskReviewDecision, type TaskDetail, type TaskSubmission } from '@/api/types'
-import { Button, Card, FormField, InlineError, LoadingSkeleton, Select, Textarea, useToast } from '@/components'
+import { Button, Card, FormField, InlineError, LoadingSkeleton, PointsText, Select, StatusChip, Textarea, useToast } from '@/components'
 import { useT } from '@/i18n'
 import { useFormatters } from '@/lib/timeZoneContext'
 import { useGroup } from '@/app/group/groupContext'
+import { EvidenceLinks } from './support/WorkParts'
 import styles from './TaskDetail.module.css'
 
 interface DecisionValues {
@@ -86,6 +87,7 @@ export function ReviewPanel({ task, target }: { task: TaskDetail; target: TaskSu
   const preview = useReviewPreview(target.id)
   const review = useReviewResult(groupId, task.id)
   const data = preview.data
+  const takeover = task.originalAssignee.userId !== task.currentExecutor.userId
 
   const form = useForm<DecisionValues>({
     resolver: zodResolver(
@@ -144,6 +146,21 @@ export function ReviewPanel({ task, target }: { task: TaskDetail; target: TaskSu
         {t('taskDetail.review.title')}
       </h2>
       <p>{t('taskDetail.review.target', { no: target.submissionNo, time: f.dateTime(target.submittedAt) })}</p>
+      {takeover ? (
+        <div className={styles.handoffBox} data-testid="review-handoff">
+          <p>
+            <StatusChip tone="info" icon="users" label={t('handoff.badge')} /> <strong>{t('handoff.reviewTitle')}</strong>
+          </p>
+          <p>{t('handoff.reviewNote', { helper: task.currentExecutor.name, original: task.originalAssignee.name })}</p>
+          {task.points ? (
+            <p>
+              <PointsText>{f.pointsLabel(task.points.amount)}</PointsText> · <span>{t('handoff.pendingNoPoints')}</span>
+            </p>
+          ) : null}
+          {target.resultNote ? <p className={styles.prewrap}>{target.resultNote}</p> : null}
+          <EvidenceLinks items={target.evidence} />
+        </div>
+      ) : null}
 
       {preview.isPending ? <LoadingSkeleton variant="text" lines={3} /> : null}
       {preview.isError ? <InlineError error={preview.error} onRetry={() => void preview.refetch()} /> : null}

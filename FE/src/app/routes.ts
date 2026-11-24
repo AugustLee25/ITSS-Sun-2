@@ -27,8 +27,9 @@ export const paths = {
   difficulty: (groupId: string, supportRequestId: string) => `/groups/${enc(groupId)}/difficulty/${enc(supportRequestId)}`, // S07 (TL xử lý / xem của mình)
   help: (groupId: string) => `/groups/${enc(groupId)}/help`, // S08
   helpRequest: (groupId: string, helpRequestId: string) => `/groups/${enc(groupId)}/help/${enc(helpRequestId)}`, // S09
-  helpWork: (groupId: string, helpRequestId: string) => `/groups/${enc(groupId)}/help/${enc(helpRequestId)}/work`, // S10
-  helpReview: (groupId: string, helpRequestId: string) => `/groups/${enc(groupId)}/help/${enc(helpRequestId)}/review`, // S11
+  /** Link cũ (S10/S11 đã bỏ): chỉ còn là đường chuyển hướng về chi tiết task. Không dùng để tạo link mới. */
+  helpWork: (groupId: string, helpRequestId: string) => `/groups/${enc(groupId)}/help/${enc(helpRequestId)}/work`,
+  helpReview: (groupId: string, helpRequestId: string) => `/groups/${enc(groupId)}/help/${enc(helpRequestId)}/review`,
   points: (groupId: string) => `/groups/${enc(groupId)}/points`, // S12
 }
 
@@ -87,14 +88,14 @@ export function pathForTarget(target: ScreenTarget): string {
       return g ? paths.help(g) : fallback
     case 'S09':
       return g && p.helpRequestId ? paths.helpRequest(g, p.helpRequestId) : fallback
-    case 'S10': {
-      // Thông báo SUPPORT_* có thể chỉ mang `workId`; S10/S11 chấp nhận cả hai khóa trong URL.
-      const key = p.helpRequestId ?? p.workId
-      return g && key ? paths.helpWork(g, key) : fallback
-    }
+    // Solution 2: không còn màn thực hiện/nghiệm thu hỗ trợ riêng — thông báo S10/S11 dẫn về chính task (S05).
+    // Chỉ khi thông báo không mang `taskId` mới dùng đường dẫn cũ, và đường dẫn đó tự chuyển hướng về task.
+    case 'S10':
     case 'S11': {
+      if (g && p.taskId) return paths.task(g, p.taskId)
       const key = p.helpRequestId ?? p.workId
-      return g && key ? paths.helpReview(g, key) : fallback
+      if (!g || !key) return fallback
+      return target.screen === 'S10' ? paths.helpWork(g, key) : paths.helpReview(g, key)
     }
     case 'S12': {
       if (!g) return fallback

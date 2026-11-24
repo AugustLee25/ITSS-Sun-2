@@ -52,6 +52,11 @@ public class HandoffService {
 		if (tasks.inFlightRevision(f.roundId()).isPresent()) {
 			throw Err.conflict("TASK_NOT_TRANSFERABLE", "Task đang có bản sửa kế hoạch chưa được xử lý.");
 		}
+		// T-07: kỳ của task đã chốt mà chưa chuyển kỳ → nói rõ bước cần làm thay vì "vòng đã nộp/đã khóa" chung chung
+		if (f.cycleClosesAt() != null && clock.instant().isAfter(f.cycleClosesAt())) {
+			throw Err.conflict("CARRYOVER_REQUIRED",
+					"Kỳ checkpoint của task đã chốt. TL cần chốt deadline xử lý tiếp (chuyển kỳ) cho task này trước khi đăng lên Workspace.");
+		}
 		app.hanare.task.TaskWritePolicy.requireRoundExecution(jdbc, f.roundId(), clock.instant());
 	}
 

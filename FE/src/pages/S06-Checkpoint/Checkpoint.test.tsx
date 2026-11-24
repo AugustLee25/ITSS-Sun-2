@@ -70,6 +70,15 @@ const setup = (extra: ApiRoute[], data = report()) => mockApi([...extra, ['GET',
 const itemOf = (title: string) => within(screen.getByRole('heading', { name: title }).closest('li') as HTMLElement)
 
 describe('S06 — Cập nhật checkpoint', () => {
+  it('[S2-A1] mỗi task trong danh sách checkpoint tuần có nút `Cần giúp đỡ` (dẫn tới đề nghị riêng cho TL), không cần chọn mức nguy cơ trước', async () => {
+    setup([])
+    renderApp(PATH)
+    await screen.findByRole('heading', { name: 'Viết báo cáo' })
+    // task chưa chọn mức nguy cơ nào vẫn có nút; task không được phép báo khó khăn thì không có
+    expect(itemOf('Viết báo cáo').getByRole('link', { name: 'Cần giúp đỡ' })).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks/task-2/difficulty`)
+    expect(itemOf('Thiết kế API').queryByRole('link', { name: 'Cần giúp đỡ' })).not.toBeInTheDocument()
+  })
+
   it('nhập minh chứng và hạn dự kiến cùng kỳ, chỉ gửi một request báo cáo', async () => {
     const api = setup([['POST', `${API}/submit`, report({ state: 'SUBMITTED', version: 1 })]], report({ items: [
       { ...openItem, taskId: 'task-1', roundId: 'round-1', title: 'Thiết kế API', currentPlanRevisionId: 'plan-1', riskLevel: 'ON_TRACK', prefilled: true },
@@ -149,7 +158,7 @@ describe('S06 — Cập nhật checkpoint', () => {
 
     await user.click(screen.getByRole('button', { name: 'Xác nhận 1 task đã nộp kết quả' }))
     await user.click(itemOf('Viết báo cáo').getByRole('radio', { name: 'Cần TL hỗ trợ' }))
-    expect(itemOf('Viết báo cáo').getByRole('link', { name: 'Gửi đề nghị riêng cho TL' })).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks/task-2/difficulty`)
+    expect(itemOf('Viết báo cáo').getByRole('link', { name: 'Cần giúp đỡ' })).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks/task-2/difficulty`)
     await user.type(itemOf('Viết báo cáo').getByLabelText(/Tình hình \/ lý do chưa xong/), 'Kẹt DB')
     fireEvent.change(itemOf('Viết báo cáo').getByLabelText(/Ngày giờ dự kiến hoàn thành/), { target: { value: '2026-11-25' } })
     await user.click(screen.getByRole('button', { name: 'Gửi báo cáo tuần' }))

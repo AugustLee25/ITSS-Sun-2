@@ -22,7 +22,7 @@ import {
 } from '@/components'
 import { useT } from '@/i18n'
 import { useFormatters } from '@/lib/timeZoneContext'
-import { EvidenceLinks } from '../S10-HelpExecution/WorkParts'
+import { EvidenceLinks } from '../S05-TaskDetail/support/WorkParts'
 import { Pager } from './Pager'
 import styles from './Points.module.css'
 
@@ -60,9 +60,9 @@ function Row({ item }: { item: PointHistoryItem }) {
         <time dateTime={item.occurredAt}>{f.dateTime(item.occurredAt)}</time> · {t('myPoints.history.assignmentNote')}
       </p>
       <StatusChip size="sm" tone="neutral" label={t('myPoints.history.ASSIGNMENT')} />
-      {item.workId ? (
+      {item.workId && item.task ? (
         <CardActions>
-          <ButtonLink variant="secondary" to={paths.helpWork(groupId, item.workId)}>
+          <ButtonLink variant="secondary" to={paths.task(groupId, item.task.id)}>
             {t('myPoints.tasks.openWork')}
           </ButtonLink>
         </CardActions>
@@ -175,11 +175,6 @@ export function LedgerDetail({ entryId, onClose }: { entryId: string; onClose: (
             <ButtonLink variant="secondary" to={paths.task(groupId, data.task.id)}>
               {t('myPoints.entry.openTask')}
             </ButtonLink>
-            {data.workId ? (
-              <ButtonLink variant="secondary" to={paths.helpWork(groupId, data.workId)}>
-                {t('myPoints.entry.openWork')}
-              </ButtonLink>
-            ) : null}
           </div>
         </div>
       ) : null}

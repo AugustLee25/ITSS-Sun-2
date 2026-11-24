@@ -53,7 +53,8 @@ class HelpFlowTest extends HelpTestBase {
 		String draft="{\"version\":null,\"items\":[{\"taskId\":\""+w.t("a3").taskId()+"\",\"declaredResult\":\"RESULT_MISSING\",\"riskLevel\":\"ON_TRACK\",\"note\":\"Nháp chưa gửi của người gốc\"}]}";
 		call(w.a(),org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(report).contentType(MediaType.APPLICATION_JSON).content(draft),200);
 		MvcResult accepted=publishAndAccept(w,"a3",w.a(),w.b()); UUID work=uuid(accepted,"$.work.id");
-		assertThat(errorCode(postIdem(w.b(),"/api/v1/task-rounds/"+w.t("a3").roundId()+"/submissions",evidenceJson(),409))).isEqualTo("INVALID_STATE");
+		// Solution 2: Helper nộp bằng popup chung của task (S05) — không còn bị chặn; lệch bản kế hoạch vẫn bị từ chối
+		assertThat(errorCode(postIdem(w.b(),"/api/v1/task-rounds/"+w.t("a3").roundId()+"/submissions",evidenceJson(),409))).isEqualTo("PLAN_CHANGED");
 		MvcResult view=getOk(w.b(),report);
 		List<java.util.Map<String,Object>> rows=at(view,"$.items");
 		List<java.util.Map<String,Object>> items=new java.util.ArrayList<>();

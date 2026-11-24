@@ -1,0 +1,173 @@
+{
+  "source": "HANARE_SOLUTION2_CORE_REQUIREMENTS.md",
+  "note": "Ma trận truy vết yêu cầu -> kiểm tra tự động. Kiểu check: be (class#method cụ thể), be-tag (mọi test BE có tên chứa tag, tối thiểu min), fe-tag (mọi test FE có tiêu đề chứa [tag], tối thiểu min), grep (present|absent trong file, đường dẫn tương đối gốc dự án), doc (mẫu phải xuất hiện trong tài liệu).",
+  "requirements": [
+    { "id": "S2-A1", "ref": "§4 điểm vào; §6.1; §8.1", "title": "Nút `Cần giúp đỡ` ở My Tasks (S03/S04) và task trong checkpoint tuần (S06)",
+      "checks": [
+        { "kind": "fe-tag", "tag": "S2-A1", "min": 3 },
+        { "kind": "grep", "file": "FE/src/i18n/vi.ts", "pattern": "Cần giúp đỡ", "expect": "present" }
+      ] },
+    { "id": "S2-A2", "ref": "§6.1; §8.1", "title": "Yêu cầu giúp đỡ gửi riêng TL; người khác không xem được; không tự đổi task/deadline/điểm",
+      "checks": [
+        { "kind": "be", "class": "SupportTest", "method": "assigneeSendsPrivateRequestAndOnlyTheLeadIsNotifiedWithoutPrivateContent" },
+        { "kind": "be", "class": "SupportTest", "method": "requestIsReadableOnlyBySenderAndLeadAndNeverLeaksElsewhere" },
+        { "kind": "be-tag", "tag": "S2_A2", "min": 1 }
+      ] },
+    { "id": "S2-A3", "ref": "§6.11; §8.15", "title": "Không rò nội dung riêng qua Workspace, Dashboard, thông báo, API",
+      "checks": [
+        { "kind": "be", "class": "NotificationTest", "method": "openNeverExposesAPrivateSupportRequestToOtherMembers" },
+        { "kind": "be-tag", "tag": "S2_A3", "min": 1 }
+      ] },
+
+    { "id": "S2-B1", "ref": "§5 L1; §8.3", "title": "Dashboard TL: click Member xem TOÀN BỘ task (tuần, tồn đọng, đã hoàn thành)",
+      "checks": [
+        { "kind": "be-tag", "tag": "S2_B1", "min": 1 },
+        { "kind": "fe-tag", "tag": "S2-B1", "min": 1 }
+      ] },
+    { "id": "S2-B2", "ref": "§5 L1; §8.3", "title": "Task quá hạn chưa có kết quả hợp lệ: lên đầu, tên đỏ pastel, nhãn `Quá hạn` + deadline; không đỏ task nộp đúng hạn chờ duyệt",
+      "checks": [
+        { "kind": "be-tag", "tag": "S2_B2", "min": 1 },
+        { "kind": "fe-tag", "tag": "S2-B2", "min": 1 },
+        { "kind": "grep", "file": "FE/src/i18n/vi.ts", "pattern": "Quá hạn", "expect": "present" }
+      ] },
+    { "id": "S2-B3", "ref": "§5 L1; §8.3", "title": "Task Member bấm `Cần giúp đỡ`: nhóm ưu tiên, vàng pastel, nhãn `Cần hỗ trợ`; vừa quá hạn vừa cần giúp = một dòng đỏ + nhãn thêm",
+      "checks": [
+        { "kind": "be-tag", "tag": "S2_B3", "min": 1 },
+        { "kind": "fe-tag", "tag": "S2-B3", "min": 1 },
+        { "kind": "grep", "file": "FE/src/i18n/vi.ts", "pattern": "Cần hỗ trợ", "expect": "present" }
+      ] },
+    { "id": "S2-B4", "ref": "§5 L1", "title": "Task DONE xuống cuối; SUBMITTED chờ duyệt có nhãn riêng",
+      "checks": [
+        { "kind": "be-tag", "tag": "S2_B4", "min": 1 },
+        { "kind": "fe-tag", "tag": "S2-B4", "min": 1 }
+      ] },
+    { "id": "S2-B5", "ref": "§5 L1; §8.4", "title": "Nút `Đưa lên Workspace` tại task hợp lệ (chỉ TL; chặn DONE/SUBMITTED/đã đăng)",
+      "checks": [
+        { "kind": "be-tag", "tag": "S2_B5", "min": 1 },
+        { "kind": "fe-tag", "tag": "S2-B5", "min": 1 },
+        { "kind": "grep", "file": "FE/src/i18n/vi.ts", "pattern": "Đưa lên Workspace", "expect": "present" }
+      ] },
+
+    { "id": "S2-C1", "ref": "§3; §8.6", "title": "Chỉ TL đăng yêu cầu; Member không tự đăng, không tự tạo điểm",
+      "checks": [
+        { "kind": "be", "class": "HelpFlowTest", "method": "memberCannotPublishAndLeadInputIsValidated" },
+        { "kind": "fe-tag", "tag": "S2-C1", "min": 1 }
+      ] },
+    { "id": "S2-C2", "ref": "§5 L1-3; §8.5", "title": "Đăng task chưa nghiệm thu: nội dung/đầu ra/deadline/độ khó/toàn bộ P_t cố định từ task gốc",
+      "checks": [
+        { "kind": "be", "class": "HelpFlowTest", "method": "leadPublishesWholeTaskAtTheLockedPriceAndHoldsItWithOneReservation" },
+        { "kind": "be", "class": "PointsAcceptanceTest", "method": "publishedPriceNeverChangesWhenDifficultyChangesAndReviewIsBlockedWhileTheRequestHoldsTheFund" }
+      ] },
+    { "id": "S2-C3", "ref": "§4 M1", "title": "Workspace hiển thị đủ tên, phạm vi, đầu ra, deadline, độ khó, P_t, trạng thái; mở được chi tiết",
+      "checks": [
+        { "kind": "fe-tag", "tag": "S2-C3", "min": 1 }
+      ] },
+    { "id": "S2-C4", "ref": "§4 M2; §8.7", "title": "Đề nghị tự nguyện: gửi/rút; chưa chọn thì chưa bàn giao; không bị trừ điểm/ghi tiêu cực",
+      "checks": [
+        { "kind": "be", "class": "HelpFlowTest", "method": "offersAreVoluntaryWithdrawableAndNeedReconfirmationAfterAnImportantEdit" },
+        { "kind": "be-tag", "tag": "S2_C4", "min": 1 }
+      ] },
+    { "id": "S2-C5", "ref": "§4 M2", "title": "Chi tiết có điều kiện `Chỉ nhận điểm sau khi TL nghiệm thu`; không có nút `Nhận việc ngay`",
+      "checks": [
+        { "kind": "fe-tag", "tag": "S2-C5", "min": 1 },
+        { "kind": "grep", "file": "FE/src/i18n/vi.ts", "pattern": "Nhận việc ngay", "expect": "absent" }
+      ] },
+    { "id": "S2-C6", "ref": "§5 L2", "title": "TL xem người đề nghị trong Workspace với nút `Chấp thuận` / `Không chọn`",
+      "checks": [
+        { "kind": "fe-tag", "tag": "S2-C6", "min": 1 }
+      ] },
+    { "id": "S2-C7", "ref": "§5 L2; §8.8", "title": "Chấp thuận: cùng task_id, đổi người thực hiện, giữ người gốc & lịch sử, không nhân bản; điểm xác nhận KHÔNG đổi",
+      "checks": [
+        { "kind": "be", "class": "HelpFlowTest", "method": "acceptingAnOfferHandsOverExecutorAndWholePriceInOneTransactionWithoutWritingTheLedger" },
+        { "kind": "be-tag", "tag": "S2_C7", "min": 1 }
+      ] },
+    { "id": "S2-C8", "ref": "§5 L2-3; §8.8", "title": "Sau bàn giao task vào My Tasks/checkpoint của Helper; KHÔNG có màn `My Support Work`; chấp thuận không điều hướng sang màn riêng",
+      "checks": [
+        { "kind": "be-tag", "tag": "S2_C8", "min": 1 },
+        { "kind": "fe-tag", "tag": "S2-C8", "min": 1 },
+        { "kind": "grep", "file": "FE/src/app/router.tsx", "pattern": "S10-HelpExecution", "expect": "absent" },
+        { "kind": "grep", "file": "FE/src/app/router.tsx", "pattern": "S11-Review", "expect": "absent" },
+        { "kind": "grep", "file": "FE/src/pages/S09-HelpDetail/index.tsx", "pattern": "paths\\.helpWork", "expect": "absent" }
+      ] },
+    { "id": "S2-C9", "ref": "§5 L1-4, L2-1; §6.7", "title": "Chặn đăng/chấp thuận khi task DONE, SUBMITTED chờ duyệt, đã có Helper, hoặc nội dung/deadline đã đổi",
+      "checks": [
+        { "kind": "be", "class": "HelpFlowTest", "method": "onlyUnsubmittedOrReworkTasksCanBeHandedOver" },
+        { "kind": "be", "class": "HelpFlowTest", "method": "openOfferRequiresReconfirmationAfterCarryoverAndUsesTheTargetRound" }
+      ] },
+
+    { "id": "S2-D1", "ref": "§5 L3-1; §8.9", "title": "Helper nộp minh chứng bằng popup Solution 1 (S05 `Nộp kết quả` / S06) → SUBMITTED, chưa tính điểm",
+      "checks": [
+        { "kind": "be", "class": "HelpFlowTest", "method": "helperCheckpointUsesSharedSubmissionAndHandoffInvalidatesOnlyUnsentDraftItems" },
+        { "kind": "be-tag", "tag": "S2_D1", "min": 1 },
+        { "kind": "fe-tag", "tag": "S2-D1", "min": 1 }
+      ] },
+    { "id": "S2-D2", "ref": "§5 L3; §8.9", "title": "Review chung của Solution 1: nhãn `Nhận làm thay` + Helper hiện tại + Member gốc + minh chứng + P_t; Chấp nhận/Cần sửa/Cần bổ sung",
+      "checks": [
+        { "kind": "fe-tag", "tag": "S2-D2", "min": 1 },
+        { "kind": "grep", "file": "FE/src/i18n/vi.ts", "pattern": "Nhận làm thay", "expect": "present" }
+      ] },
+    { "id": "S2-D3", "ref": "§5 L3-3; §8.10; §8.12", "title": "Duyệt đạt: task DONE, yêu cầu COMPLETED, Helper +P_t đúng một lần, người gốc không nhận, tổng quỹ ≤ 100%",
+      "checks": [
+        { "kind": "be", "class": "HelpFlowTest", "method": "helperSubmissionThenAcceptedReviewConfirmsOneContributionAndWritesOneAward" },
+        { "kind": "be", "class": "PointsAcceptanceTest", "method": "transferTakeOverApproveAllKeepsTotalAtOneHundredPercentAndUnfinishedWorkStaysBelow" }
+      ] },
+    { "id": "S2-D4", "ref": "§5 L3-4,5; §8.11", "title": "Chưa đạt/chưa duyệt: không đổi điểm đã xác nhận; task sửa giữ ID/quỹ/lịch sử",
+      "checks": [
+        { "kind": "be", "class": "HelpFlowTest", "method": "revisionRequestedKeepsPriceAndAfterCarryoverHelperResubmitsWithoutANewFund" },
+        { "kind": "be-tag", "tag": "S2_D4", "min": 1 }
+      ] },
+    { "id": "S2-D5", "ref": "§6.6; §8.13", "title": "Không cộng trùng khi duyệt hai lần / hai đường API / retry",
+      "checks": [
+        { "kind": "be", "class": "PointsAcceptanceTest", "method": "concurrentAndRepeatedApprovalsNeverPayTheSameTaskTwice" },
+        { "kind": "be", "class": "PointQueryTest", "method": "acceptedResultWritesExactlyOneAwardAndRepeatedApprovalDoesNotPayTwice" }
+      ] },
+    { "id": "S2-D6", "ref": "§3; §6.6", "title": "Chỉ TL/người duyệt độc lập duyệt; Helper và người nhận điểm không tự duyệt",
+      "checks": [
+        { "kind": "be", "class": "HelpFlowTest", "method": "leadsOwnTaskNeedsTheIndependentApproverAsResultApprover" },
+        { "kind": "be-tag", "tag": "S2_D6", "min": 1 }
+      ] },
+    { "id": "S2-D7", "ref": "§4 M3; §8.12", "title": "Điểm đã nhận / chưa nhận / khả năng nhận tách bạch; M3 hiện `Chưa tính điểm — chờ nghiệm thu`",
+      "checks": [
+        { "kind": "be", "class": "PointQueryTest", "method": "meBeforeAndAfterActivationDistinguishesInitialConfirmedPendingAndPotential" },
+        { "kind": "fe-tag", "tag": "S2-D7", "min": 1 },
+        { "kind": "grep", "file": "FE/src/i18n/vi.ts", "pattern": "Chưa tính điểm — chờ nghiệm thu", "expect": "present" }
+      ] },
+    { "id": "S2-D8", "ref": "§6.8", "title": "Helper không thể tiếp tục: có quyết định xử lý và lịch sử; không tự chuyển, không tự thu hồi điểm đã xác nhận",
+      "checks": [
+        { "kind": "be", "class": "HelpFlowTest", "method": "helperCanReportUnableAndLeadResolvesByResumingCancellingOrReopening" },
+        { "kind": "fe-tag", "tag": "S2-D8", "min": 1 }
+      ] },
+    { "id": "S2-D9", "ref": "§6.9", "title": "Người gốc quay lại không tự giành lại task đã bàn giao",
+      "checks": [
+        { "kind": "be-tag", "tag": "S2_D9", "min": 1 }
+      ] },
+    { "id": "S2-D10", "ref": "§6.10; §8.15; §9.2", "title": "Mất liên lạc: không tự ép ai nhận; chuyển điểm khi người gốc không xác nhận để PO chốt (ghi rõ trong tài liệu)",
+      "checks": [
+        { "kind": "be-tag", "tag": "S2_D10", "min": 1 },
+        { "kind": "doc", "file": "docs/SOLUTION2_CONFORMANCE.md", "pattern": "PO-02" }
+      ] },
+    { "id": "S2-D11", "ref": "§8.14", "title": "Người gốc và Helper kiểm tra được lịch sử bàn giao theo quyền",
+      "checks": [
+        { "kind": "be-tag", "tag": "S2_D11", "min": 1 },
+        { "kind": "fe-tag", "tag": "S2-D11", "min": 1 }
+      ] },
+    { "id": "S2-D12", "ref": "§6.12", "title": "Bàn giao không sửa ngược snapshot/kết quả checkpoint kỳ trước",
+      "checks": [
+        { "kind": "be-tag", "tag": "S2_D12", "min": 1 }
+      ] },
+    { "id": "S2-Z1", "ref": "Đợt kiểm thử Tester/Hacker", "title": "Mọi lỗi trong docs/BUG_REPORT.md đã sửa và được tích [x] (không còn lỗi mở)",
+      "checks": [
+        { "kind": "grep", "file": "docs/BUG_REPORT.md", "pattern": "^- \\[ \\]", "expect": "absent" }
+      ] },
+    { "id": "S2-Z2", "ref": "Rà soát lộ khóa / secret", "title": "Không có secret mặc định trong cấu hình đóng gói vào jar; CSDL dev không mở ra mạng ngoài loopback",
+      "checks": [
+        { "kind": "be", "class": "JwtSecretTest", "method": "noConfigShippedInTheJarCarriesAnyNonEmptyDefaultSecret" },
+        { "kind": "grep", "file": "docker-compose.yml", "pattern": "^\\s*-\\s*\"5432:5432\"", "expect": "absent" }
+      ] },
+    { "id": "S2-D13", "ref": "§7", "title": "Thông báo dẫn về đúng task/yêu cầu/hàng đợi; không có màn đích S10/S11 riêng",
+      "checks": [
+        { "kind": "be", "class": "NotificationTest", "method": "targetsFollowTheScreenTableOfTheContract" },
+        { "kind": "fe-tag", "tag": "S2-D13", "min": 1 }
+      ] }
+  ]
+}

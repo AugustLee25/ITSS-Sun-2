@@ -12,7 +12,8 @@ services:
       TZ: UTC
       PGTZ: UTC
     ports:
-      - "5432:5432"
+      # H-04: chỉ lắng nghe ở loopback; mật khẩu hanare/hanare chỉ dành cho dev, không để lộ ra mạng LAN.
+      - "127.0.0.1:5432:5432"
     volumes:
       - hanare-db-data:/var/lib/postgresql/data
     healthcheck:

@@ -7,8 +7,9 @@ spring:
 
 hanare:
   jwt:
-    # CHỈ dùng khi dev. Production phải đặt HANARE_JWT_SECRET.
-    secret: ${HANARE_JWT_SECRET:dev-only-hanare-jwt-secret-change-me-0123456789}
+    # Không có secret mặc định trong repo (H-01): để trống thì tự sinh khóa ngẫu nhiên mỗi lần khởi động. Production phải đặt
+    # HANARE_JWT_SECRET.
+    secret: ${HANARE_JWT_SECRET:}
 
 logging:
   level:

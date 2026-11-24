@@ -11,7 +11,8 @@ import {
   TaskAction,
 } from '@/api/types'
 import { useGroup } from '@/app/group/groupContext'
-import { Button, EmptyState, FormField, InlineError, Input, LoadingSkeleton, PageHeader, Select } from '@/components'
+import { paths } from '@/app/routes'
+import { Button, ButtonLink, EmptyState, FormField, InlineError, Input, LoadingSkeleton, PageHeader, Select } from '@/components'
 import { useT, type MessageKey } from '@/i18n'
 import { BalanceTable } from './BalanceTable'
 import { CreateTaskDialog } from './CreateTaskDialog'
@@ -220,7 +221,17 @@ export default function S04Tasks() {
                     <input type="checkbox" aria-label={t('workflow.select', { title: task.title })} checked={!!selected[task.id]} onChange={(event) => setSelected((old) => {
                       const next = { ...old }; if (event.target.checked) next[task.id] = { planId: task.draftPlanId!, version: task.draftPlanVersion! }; else delete next[task.id]; return next
                     })} />{t('workflow.select', { title: task.title })}</label> : null}
-                  <TaskSummaryCard task={task} groupId={groupId} />
+                  <TaskSummaryCard
+                    task={task}
+                    groupId={groupId}
+                    actions={
+                      task.allowedActions.includes(TaskAction.REPORT_DIFFICULTY) ? (
+                        <ButtonLink to={paths.taskDifficulty(groupId, task.id)} variant="ghost" preventScrollReset>
+                          {t('tasks.card.needHelp')}
+                        </ButtonLink>
+                      ) : undefined
+                    }
+                  />
                 </li>
               ))}
             </ul>

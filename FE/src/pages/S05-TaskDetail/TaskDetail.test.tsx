@@ -48,7 +48,7 @@ describe('helper S05', () => {
 })
 
 describe('S05 — xem chi tiết (Member)', () => {
-  it('hai nhãn kế hoạch/thực hiện tách bạch, mốc thời gian, kết quả đã nộp (đúng hạn, bản TL sẽ xét), điểm P_t và quyền riêng tư', async () => {
+  it('[S2-A1] hai nhãn kế hoạch/thực hiện tách bạch, mốc thời gian, kết quả đã nộp (đúng hạn, bản TL sẽ xét), điểm P_t và quyền riêng tư', async () => {
     mockApi([
       ['GET', TASK, taskDetail({ originalDeadline: '2026-11-19T13:00:00Z', allowedActions: [TaskAction.VIEW_RESULT, TaskAction.REPORT_CHECKPOINT, TaskAction.REPORT_DIFFICULTY] })],
       ...common(GroupRole.MEMBER),
@@ -81,7 +81,7 @@ describe('S05 — xem chi tiết (Member)', () => {
     expect(screen.queryByRole('button', { name: 'Gửi kết quả' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Xác nhận quyết định' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Báo cáo checkpoint' })).toHaveAttribute('href', `${pageUrl}/checkpoint`)
-    expect(screen.getByRole('link', { name: 'Báo khó khăn' })).toHaveAttribute('href', `${pageUrl}/difficulty`)
+    expect(screen.getByRole('link', { name: 'Cần giúp đỡ' })).toHaveAttribute('href', `${pageUrl}/difficulty`)
   })
 
   it('bản sửa chờ duyệt hiển thị song song với bản đang hiệu lực, kèm giá trị cũ/mới, người gửi, lý do', async () => {

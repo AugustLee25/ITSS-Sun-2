@@ -215,6 +215,10 @@ public class OfferService {
 		}
 		Instant now = clock.instant();
 		UUID helper = offer.helperId();
+		// T-12: người nhận việc phải còn là thành viên đang hoạt động của nhóm
+		if (!access.isActiveMember(r.projectId(), helper)) {
+			throw Err.conflict("OFFER_HELPER_NOT_ACTIVE", "Người đề nghị không còn là thành viên của nhóm nên không thể nhận việc.");
+		}
 		// offer được chọn / các offer còn lại không được chọn (lịch sự, không lý do)
 		List<UUID> notSelected = jdbc.sql("""
 				SELECT id FROM support_offers WHERE help_request_id = :h AND status = 'PENDING' AND id <> :o ORDER BY created_at

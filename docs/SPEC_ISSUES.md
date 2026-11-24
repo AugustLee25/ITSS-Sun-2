@@ -59,3 +59,14 @@ Các dòng dưới đây cập nhật các quyết định cũ cùng chủ đề
 - [Workflow/TL] TL có thể review cần sửa + carryover nguyên tử hoặc tách hai bước; reviewer độc lập chỉ review. Hạn mới trong kỳ và hạn nhóm; khác đề xuất thành viên hoặc bỏ qua kỳ cần lý do. Kỳ có task/kế hoạch/báo cáo được giữ khi đổi lịch; duyệt kế hoạch kiểm lại điều kiện hiện hành.
 - [Workflow/TQ] S03 bỏ nháp/task tương lai/đã DONE, ưu tiên tồn đọng. Card vàng khi lỡ 1 cutoff, đỏ pastel từ 2; không cộng thời gian chờ reviewer. Không thay màu thành viên C02. Hai bộ DTO task và points dùng chung phép tính trạng thái/đúng hạn/risk.
 - [Workflow/API] V31 thêm plan reference và pending evidence cho report, nguồn report item cho carryover, CANCELLED và kho replay. Module task tiếp tục nhận client cũ không gửi Idempotency-Key; FE luôn gửi khóa ổn định cho batch/report/submission/review/carryover. Các thao tác này lưu JSON response bền, xung đột body trả 409; không áp TTL/không thêm replay header. Ngoài các đường đã nêu, giữ cơ chế idempotency tự nhiên hiện có của help/points, không khẳng định đã có kho replay toàn hệ thống.
+
+
+## Áp dụng đặc tả Solution 2 — 24/11/2026
+
+Nguồn: `HANARE_SOLUTION2_CORE_REQUIREMENTS.md` (bản dự thảo chờ Product Owner). Đối chiếu từng yêu cầu ↔ code ↔ test ở [`SOLUTION2_CONFORMANCE.md`](SOLUTION2_CONFORMANCE.md); harness tự động ở `harness/`.
+
+- [S2/L1] Dashboard TL: click Member xem TOÀN BỘ task (không theo kỳ) qua `GET /groups/{id}/dashboard/members/{userId}/tasks` (chỉ TL); server phân nhóm/sắp xếp: quá hạn → cần hỗ trợ → đang làm → chờ duyệt → DONE. "Quá hạn" tính theo **deadline hiện tại** đã qua và chưa có kết quả hợp lệ; nộp đúng hạn chờ duyệt không bị tính quá hạn. Task vừa quá hạn vừa cần giúp là MỘT dòng đỏ có thêm nhãn "Cần hỗ trợ". Màu đỏ/vàng chỉ là pastel + luôn kèm nhãn chữ (WCAG).
+- [S2/S10-S11] Bỏ màn thực hiện (S10) và nghiệm thu (S11) riêng: Helper nộp bằng popup `Gửi kết quả` của task (S05) hoặc S06; TL duyệt ở khung duyệt của S05 với nhãn `Nhận làm thay`; lịch sử bàn giao/`Báo không thể hoàn thành`/thống nhất xử lý nằm trong khối "Nhận làm thay" của S05. `/help/:id/work|review` giữ lại chỉ để chuyển hướng link cũ về task.
+- [S2/BE] `POST /task-rounds/{roundId}/submissions` cho phép Helper (trước đây trả `INVALID_STATE`): bản nộp đi qua đường ghi của `support-works` nên vẫn liên kết contribution/điểm. `TaskViews.supportWorks` bỏ work của yêu cầu `CANCELLED` — trước đó người gốc sau khi TL hoàn trả (`CANCEL_REQUEST`) vẫn bị chặn nộp.
+- [S2/FE] Nút `Cần giúp đỡ` (trước là "Báo khó khăn") có ở My Tasks (S03/S04), chi tiết task (S05) và **mọi** task trong danh sách checkpoint tuần (S06), không còn phải chọn mức nguy cơ trước.
+- [S2/FE] Sau `Chấp thuận` FE về chi tiết task (không sang màn riêng). Nhãn điểm: task nhận làm thay chưa nghiệm thu hiện `Chưa tính điểm — chờ nghiệm thu` ở thẻ task, S05, khung duyệt và S12.

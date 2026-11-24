@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { GroupRole, type CycleTaskRow, type LeadPanel, type ReviewQueueResponse } from '@/api/types'
 import { targetHref } from './targets'
-import { AN, BINH, CYCLE3_REF, GROUP_ID, MINH, cycle, dashboard, taskSummary } from '@/test/fixtures'
+import { AN, BINH, CYCLE3_REF, GROUP_ID, MINH, boardRow, cycle, dashboard, memberBoard, taskSummary } from '@/test/fixtures'
 import { mockApi, renderApp, shellRoutes } from '@/test/renderApp'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -133,7 +133,7 @@ describe('S03 — Tổng quan nhóm (Member)', () => {
     expect(screen.getByText('Nhóm chưa có phương án điểm đã duyệt.')).toBeInTheDocument()
   })
 
-  it('điều hướng kỳ qua previousCycleId/nextCycleId; task của tôi có CTA báo khó khăn theo allowedActions', async () => {
+  it('[S2-A1] điều hướng kỳ qua previousCycleId/nextCycleId; My Tasks có nút `Cần giúp đỡ` theo allowedActions', async () => {
     mockApi([['GET', dash, dashboard(GroupRole.MEMBER)], ...shellRoutes(AN, GroupRole.MEMBER)])
     renderApp(`/groups/${GROUP_ID}`)
     expect(await screen.findByRole('link', { name: 'Kỳ trước' })).toHaveAttribute('href', `/groups/${GROUP_ID}?cycleId=cyc-2`)
@@ -142,7 +142,7 @@ describe('S03 — Tổng quan nhóm (Member)', () => {
     expect(within(tasks).getByText('Thực hiện: Đã nộp — chờ TL duyệt')).toBeInTheDocument()
     expect(within(tasks).queryByText('Kế hoạch: Đã duyệt')).not.toBeInTheDocument()
     expect(within(tasks).getByText('Nộp đúng hạn — chờ TL duyệt')).toBeInTheDocument()
-    expect(within(tasks).getByRole('link', { name: 'Báo khó khăn' })).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks/task-1/difficulty`)
+    expect(within(tasks).getByRole('link', { name: 'Cần giúp đỡ' })).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks/task-1/difficulty`)
   })
 })
 
@@ -248,5 +248,124 @@ describe('S03 — Tổng quan nhóm (TL)', () => {
     const link = await screen.findByRole('link', { name: 'Lập kế hoạch đầu tiên' })
     expect(link).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks`)
     expect(taskSummary().cycle).toEqual(CYCLE3_REF)
+  })
+})
+
+describe('S03 — TL xem TOÀN BỘ task của một Member (Solution 2 · L1)', () => {
+  const detailPath = `/groups/${GROUP_ID}/dashboard/members/${BINH.userId}`
+  const boardPath = `${detailPath}/tasks`
+  const memberDetail = () => ({ cycle: cycle(3), progress: dashboard().memberProgress[1], tasks: [] })
+  const rows = () => [
+    boardRow('OVERDUE', { id: 't-over', title: 'Task quá hạn', deadline: '2026-11-18T13:00:00Z', taskStatus: 'IN_PROGRESS', timeliness: 'OVERDUE_NO_RESULT' }, { needsHelp: true, supportRequestId: 'sr-2' }),
+    boardRow('NEEDS_HELP', { id: 't-help', title: 'Task cần giúp', taskStatus: 'IN_PROGRESS', timeliness: 'NOT_DUE' }),
+    boardRow('ACTIVE', { id: 't-active', title: 'Task đang làm', taskStatus: 'IN_PROGRESS', timeliness: 'NOT_DUE' }),
+    boardRow(
+      'AWAITING_REVIEW',
+      { id: 't-await', title: 'Task chờ duyệt' },
+      { canPublishToWorkspace: false, publishBlockedCode: 'TASK_AWAITING_REVIEW', publishBlockedMessage: 'Kiểm tra bản đã nộp trước.' },
+    ),
+    boardRow('DONE', { id: 't-done', title: 'Task xong', taskStatus: 'DONE', timeliness: 'ON_TIME_ACCEPTED' }, { publishBlockedCode: 'TASK_ALREADY_DONE' }),
+  ]
+  const leadApi = () =>
+    mockApi([
+      ['GET', dash, dashboard(GroupRole.LEAD)],
+      ['GET', detailPath, memberDetail()],
+      ['GET', boardPath, memberBoard(rows())],
+      ...shellRoutes(MINH, GroupRole.LEAD),
+    ])
+  async function openBoard() {
+    const user = userEvent.setup()
+    renderApp(`/groups/${GROUP_ID}`)
+    const members = (await screen.findByRole('heading', { name: 'Tiến độ thành viên' })).closest('section') as HTMLElement
+    await user.click(within(members).getByRole('button', { name: /Bình/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'Task của Bình' })
+    await within(sheet).findByTestId('member-task-board')
+    return sheet
+  }
+
+  it('[S2-B1] click Member → toàn bộ task (quá hạn, cần hỗ trợ, đang làm, chờ duyệt, đã hoàn thành) từ một API riêng của TL', async () => {
+    const api = leadApi()
+    const sheet = await openBoard()
+    const titles = within(sheet)
+      .getAllByRole('link')
+      .map((a) => a.textContent)
+      .filter((text) => text?.startsWith('Task '))
+    expect(titles).toEqual(['Task quá hạn', 'Task cần giúp', 'Task đang làm', 'Task chờ duyệt', 'Task xong'])
+    expect(api.calls.some((c) => c.path === boardPath)).toBe(true)
+    expect(within(sheet).getByText(/1 quá hạn · 1 cần hỗ trợ · 1 chờ duyệt · 1 hoàn thành/)).toBeInTheDocument()
+  })
+
+  it('[S2-B2] quá hạn lên đầu: tên đỏ pastel + nhãn `Quá hạn` + deadline; task nộp đúng hạn chờ duyệt KHÔNG đỏ', async () => {
+    leadApi()
+    const sheet = await openBoard()
+    const overdue = within(sheet).getByRole('link', { name: 'Task quá hạn' })
+    expect(overdue).toHaveAttribute('data-pastel', 'red')
+    const row = overdue.closest('li') as HTMLElement
+    expect(row).toHaveAttribute('data-section', 'OVERDUE')
+    expect(within(row).getByText('Quá hạn')).toBeInTheDocument()
+    expect(row.querySelector('time[datetime="2026-11-18T13:00:00Z"]')).not.toBeNull()
+    const awaiting = within(sheet).getByRole('link', { name: 'Task chờ duyệt' })
+    expect(awaiting).not.toHaveAttribute('data-pastel')
+    expect(within(awaiting.closest('li') as HTMLElement).queryByText('Quá hạn')).not.toBeInTheDocument()
+  })
+
+  it('[S2-B3] cần giúp đỡ: vàng pastel + nhãn `Cần hỗ trợ`; vừa quá hạn vừa cần giúp là MỘT dòng đỏ có thêm nhãn `Cần hỗ trợ`', async () => {
+    leadApi()
+    const sheet = await openBoard()
+    const help = within(sheet).getByRole('link', { name: 'Task cần giúp' })
+    expect(help).toHaveAttribute('data-pastel', 'yellow')
+    expect(within(help.closest('li') as HTMLElement).getByText('Cần hỗ trợ')).toBeInTheDocument()
+
+    const both = within(sheet).getAllByRole('link', { name: 'Task quá hạn' })
+    expect(both).toHaveLength(1) // không hiện hai lần
+    expect(both[0]).toHaveAttribute('data-pastel', 'red')
+    const bothRow = both[0]!.closest('li') as HTMLElement
+    expect(within(bothRow).getByText('Quá hạn')).toBeInTheDocument()
+    expect(within(bothRow).getByText('Cần hỗ trợ')).toBeInTheDocument()
+    // TL mở nội dung riêng ở S07 (chỉ có id đề nghị, không có nội dung trong bảng)
+    expect(within(bothRow).getByRole('link', { name: 'Xem đề nghị riêng' })).toHaveAttribute('href', `/groups/${GROUP_ID}/difficulty/sr-2`)
+  })
+
+
+  it('[S2-B4] nhóm theo thứ tự quá hạn → cần hỗ trợ → đang làm → chờ duyệt → hoàn thành; DONE ở cuối; SUBMITTED có nhãn riêng', async () => {
+    leadApi()
+    const sheet = await openBoard()
+    const headings = within(sheet).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+    expect(headings).toEqual(['Quá hạn (1)', 'Cần hỗ trợ (1)', 'Đang thực hiện (1)', 'Chờ TL duyệt (1)', 'Đã hoàn thành (1)'])
+    const awaitingRow = within(sheet).getByRole('link', { name: 'Task chờ duyệt' }).closest('li') as HTMLElement
+    expect(within(awaitingRow).getByText('Chờ TL duyệt')).toBeInTheDocument()
+    const doneRow = within(sheet).getByRole('link', { name: 'Task xong' }).closest('li') as HTMLElement
+    expect(within(doneRow).getByText('Đã hoàn thành')).toBeInTheDocument()
+    const all = Array.from(sheet.querySelectorAll('li[data-section]')).map((li) => li.getAttribute('data-section'))
+    expect(all[all.length - 1]).toBe('DONE')
+  })
+
+  it('[S2-B5] `Đưa lên Workspace` chỉ ở task hợp lệ, mở form đăng của S08 với task (và đề nghị riêng) chọn sẵn; task chờ duyệt/DONE không có nút', async () => {
+    leadApi()
+    const sheet = await openBoard()
+    const publish = within(sheet).getAllByRole('link', { name: 'Đưa lên Workspace' })
+    expect(publish).toHaveLength(3) // quá hạn, cần hỗ trợ, đang làm
+    expect(publish[0]).toHaveAttribute('href', `/groups/${GROUP_ID}/help?create=1&taskId=t-over&supportRequestId=sr-2`)
+    expect(publish[2]).toHaveAttribute('href', `/groups/${GROUP_ID}/help?create=1&taskId=t-active`)
+    const awaitingRow = within(sheet).getByRole('link', { name: 'Task chờ duyệt' }).closest('li') as HTMLElement
+    expect(within(awaitingRow).queryByRole('link', { name: 'Đưa lên Workspace' })).not.toBeInTheDocument()
+    expect(within(awaitingRow).getByText(/Chưa đăng được: Kiểm tra bản đã nộp trước\./)).toBeInTheDocument()
+    const doneRow = within(sheet).getByRole('link', { name: 'Task xong' }).closest('li') as HTMLElement
+    expect(within(doneRow).queryByRole('link', { name: 'Đưa lên Workspace' })).not.toBeInTheDocument()
+  })
+
+  it('[S2-B5] Member (không phải TL) không gọi bảng của TL và không có `Đưa lên Workspace`', async () => {
+    const api = mockApi([
+      ['GET', dash, dashboard(GroupRole.MEMBER)],
+      ['GET', detailPath, memberDetail()],
+      ...shellRoutes(AN, GroupRole.MEMBER),
+    ])
+    const user = userEvent.setup()
+    renderApp(`/groups/${GROUP_ID}`)
+    const members = (await screen.findByRole('heading', { name: 'Tiến độ thành viên' })).closest('section') as HTMLElement
+    await user.click(within(members).getByRole('button', { name: /Bình/ }))
+    await screen.findByRole('dialog', { name: 'Task của Bình' })
+    expect(api.calls.some((c) => c.path === boardPath)).toBe(false)
+    expect(screen.queryByRole('link', { name: 'Đưa lên Workspace' })).not.toBeInTheDocument()
   })
 })

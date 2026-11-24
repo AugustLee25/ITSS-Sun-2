@@ -41,11 +41,13 @@ class AuthService {
 	private final Environment env;
 	private final GoogleIdTokenVerifier google;
 	private final String googleClientId;
+	private final LoginThrottle throttle;
 	/** Băm giả để thời gian phản hồi không lộ email có tồn tại hay không. */
 	private final String dummyHash;
 
 	AuthService(JdbcClient jdbc, PasswordEncoder encoder, JwtService jwt, Clock clock, Environment env,
-			GoogleIdTokenVerifier google, @Value("${hanare.google.client-id:}") String googleClientId) {
+			GoogleIdTokenVerifier google, @Value("${hanare.google.client-id:}") String googleClientId, LoginThrottle throttle) {
+		this.throttle = throttle;
 		this.jdbc = jdbc;
 		this.encoder = encoder;
 		this.jwt = jwt;
@@ -112,16 +114,21 @@ class AuthService {
 	}
 
 	@Transactional(readOnly = true)
-	AuthResponse login(LoginRequest req) {
+	AuthResponse login(LoginRequest req, String address) {
+		String email = normalizeEmail(req.email());
+		throttle.check(address, email); // H-02: quá nhiều lần sai → 429 trước cả khi kiểm tra mật khẩu
 		if (req.password().getBytes(StandardCharsets.UTF_8).length > PASSWORD_MAX_BYTES) {
+			throttle.recordFailure(address, email);
 			throw ApiException.of(ErrorCode.INVALID_CREDENTIALS, null);
 		}
-		Optional<UserRow> user = findByEmail(normalizeEmail(req.email()));
+		Optional<UserRow> user = findByEmail(email);
 		String hash = user.map(UserRow::passwordHash).orElse(null);
 		boolean ok = encoder.matches(req.password(), hash != null ? hash : dummyHash) && hash != null;
 		if (!ok) {
+			throttle.recordFailure(address, email);
 			throw ApiException.of(ErrorCode.INVALID_CREDENTIALS, null);
 		}
+		throttle.reset(address, email);
 		return respond(user.get());
 	}
 

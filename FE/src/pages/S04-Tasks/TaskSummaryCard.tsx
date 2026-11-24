@@ -73,6 +73,7 @@ export function TaskSummaryCard({
         {takeover ? (
           <StatusChip tone="info" size="sm" icon="users" label={t('tasks.card.takeover', { name: task.originalAssignee.name })} />
         ) : null}
+        {takeover && task.points && !task.points.awarded ? <StatusChip tone="pending" size="sm" label={t('handoff.pendingNoPoints')} /> : null}
       </CardChips>
       {actions ? <CardActions>{actions}</CardActions> : null}
     </Card>

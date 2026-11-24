@@ -4,6 +4,7 @@ import app.hanare.common.ApiError;
 import app.hanare.common.ApiException;
 import app.hanare.common.DbTime;
 import app.hanare.common.ErrorCode;
+import app.hanare.help.HelpDtos;
 import app.hanare.help.SupportWorkService;
 import app.hanare.security.CurrentUser;
 import app.hanare.security.GroupAccess;
@@ -96,9 +97,24 @@ public class ResultService {
 		String operation = "submit:" + roundId;
 		Map<String, Object> replay = requests.replay(user.id(), operation, key, r);
 		if (replay != null) return replay;
-		if (views.extras(List.of(initial)).supportWorks().containsKey(initial.round().taskId()))
-			throw ApiException.invalidState("Task đã bàn giao: nộp tại Công việc hỗ trợ hoặc checkpoint để đồng bộ đóng góp.");
-		Sub sub = writer.write(roundId, user, r, false);
+		UUID work = views.extras(List.of(initial)).supportWorks().get(initial.round().taskId());
+		Sub sub;
+		if (work != null) {
+			// Task đã bàn giao (Solution 2): Helper nộp bằng đúng popup này; đi qua đường ghi hỗ trợ để liên kết đóng góp.
+			if (!user.id().equals(initial.executor())) throw ApiException.of(ErrorCode.NOT_ASSIGNEE, null);
+			if (initial.effective() == null || !initial.effective().id().equals(r.planRevisionId()))
+				throw ApiException.of(HttpStatus.CONFLICT, "PLAN_CHANGED", "Kế hoạch đã đổi, hãy tải lại.");
+			String note = r.resultNote() == null || r.resultNote().isBlank() ? "Kết quả gửi qua nộp kết quả của task." : r.resultNote().strip();
+			if (note.length() < 10) note = note + " (nộp qua task)";
+			if (note.length() > 1000) throw ApiException.validation("resultNote", "Tối đa 1000 ký tự khi nhận làm thay.");
+			List<HelpDtos.EvidenceInput> evidence = r.evidence() == null ? List.of() : r.evidence().stream()
+					.map(e -> e == null ? null : new HelpDtos.EvidenceInput(e.type(), e.url(), e.label())).toList();
+			supportWorks.getObject().submitViaTask(work, user, key, new HelpDtos.SubmitSupportResultRequest(note, evidence, null));
+			sub = reader.require(roundId).sub();
+		}
+		else {
+			sub = writer.write(roundId, user, r, false);
+		}
 		Scope scope = scopes.of(projectId);
 		Ctx fresh = reader.require(roundId);
 		Map<String, Object> response = J.o("submission", views.submission(scope, sub, fresh.round().taskId(), null, true),
@@ -107,12 +123,24 @@ public class ResultService {
 		return response;
 	}
 
+	/** localhost, *.localhost, loopback/private/link-local IPv4 và ::1: không thể dùng làm minh chứng công khai. */
+	static boolean isInternalHost(String host) {
+		String h = host.toLowerCase(java.util.Locale.ROOT);
+		if (h.startsWith("[") && h.endsWith("]")) {
+			h = h.substring(1, h.length() - 1);
+		}
+		return h.equals("localhost") || h.endsWith(".localhost") || h.equals("::1") || h.equals("0.0.0.0")
+				|| h.matches("^(127|10)\\.\\d+\\.\\d+\\.\\d+$") || h.matches("^192\\.168\\.\\d+\\.\\d+$")
+				|| h.matches("^169\\.254\\.\\d+\\.\\d+$") || h.matches("^172\\.(1[6-9]|2\\d|3[01])\\.\\d+\\.\\d+$");
+	}
+
 	public static List<EvidenceInput> validateEvidence(SubmitResultRequest r) {
 		List<EvidenceInput> ev = r.evidence();
 		if (ev == null || ev.isEmpty()) {
 			throw ApiException.of(HttpStatus.UNPROCESSABLE_ENTITY, "EVIDENCE_REQUIRED", "Cần ít nhất một liên kết minh chứng.");
 		}
 		J.Check ck = J.check().require(ev.size() <= 5, "evidence", "Tối đa 5 minh chứng");
+		java.util.Set<String> seen = new java.util.HashSet<>();
 		for (int i = 0; i < ev.size(); i++) {
 			EvidenceInput e = ev.get(i);
 			String f = "evidence[" + i + "].url";
@@ -127,13 +155,22 @@ public class ResultService {
 			boolean ok = u.length() <= 2048 && u.startsWith("https://");
 			if (ok) {
 				try {
-					ok = new URI(u).getHost() != null;
+					URI uri = new URI(u);
+					ok = uri.getHost() != null;
+					// T-09: không nhận credential trong URL và host nội bộ/loopback (TL không mở được làm minh chứng)
+					if (ok && (uri.getUserInfo() != null || isInternalHost(uri.getHost()))) {
+						ck.add(f, "Liên kết không được chứa tài khoản/mật khẩu và phải là địa chỉ công khai");
+						continue;
+					}
 				}
 				catch (Exception ex) {
 					ok = false;
 				}
 			}
 			ck.require(ok, f, "Phải là liên kết https hợp lệ (tối đa 2048 ký tự)");
+			if (ok && !seen.add(u.toLowerCase(java.util.Locale.ROOT))) {
+				ck.add(f, "Liên kết bị trùng với một minh chứng khác");
+			}
 			if (e.label() != null && e.label().length() > 200) {
 				ck.add("evidence[" + i + "].label", "Tối đa 200 ký tự");
 			}

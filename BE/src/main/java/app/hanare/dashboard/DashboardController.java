@@ -15,9 +15,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class DashboardController {
 
 	private final DashboardService service;
+	private final MemberTaskBoardService board;
 
-	public DashboardController(DashboardService service) {
+	public DashboardController(DashboardService service, MemberTaskBoardService board) {
 		this.service = service;
+		this.board = board;
+	}
+
+	/** Solution 2 · L1: toàn bộ task của một Member, đã phân nhóm/sắp xếp (chỉ TL). */
+	@GetMapping("/members/{userId}/tasks")
+	Map<String, Object> memberTasks(@PathVariable UUID groupId, @PathVariable UUID userId, CurrentUser user) {
+		return board.board(groupId, userId, user);
 	}
 
 	@GetMapping

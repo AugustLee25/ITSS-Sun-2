@@ -6,8 +6,9 @@ Công cụ làm bài tập nhóm: kế hoạch có TL duyệt, checkpoint theo l
 | Thư mục | Nội dung |
 |---|---|
 | `BE/` | Spring Boot 4.1 · Java 21 · JdbcClient · Flyway · PostgreSQL · JWT. 84 endpoint, 36+ bảng |
-| `FE/` | React 19 · TypeScript · Vite · TanStack Query. 14 màn hình S00–S13, mobile-first |
-| `docs/` | `API_CONTRACT.md` + `api-types.ts` (hợp đồng API), `DB_SCHEMA.md`, `BE_FOUNDATION.md`, `FE_FOUNDATION.md`, `RESEARCH.md`, `SPEC_ISSUES.md` (điểm spec mơ hồ đã quyết) |
+| `FE/` | React 19 · TypeScript · Vite · TanStack Query. 12 màn hình + 2 modal (S00–S09, S12, S13; S10/S11 đã bỏ theo Solution 2), mobile-first |
+| `harness/` | Harness nghiệm thu **Solution 2**: ma trận yêu cầu → test, chạy bằng `harness\harness.cmd` (xem [`harness/README.md`](harness/README.md)) |
+| `docs/` | `SOLUTION2_CONFORMANCE.md` (đối chiếu Solution 2 + điểm PO cần chốt), `API_CONTRACT.md` + `api-types.ts` (hợp đồng API), `DB_SCHEMA.md`, `BE_FOUNDATION.md`, `FE_FOUNDATION.md`, `RESEARCH.md`, `SPEC_ISSUES.md` (điểm spec mơ hồ đã quyết) |
 | `.claude/skills/` | Skill cài cho dự án (nguồn ghi trong `SOURCES.md`) |
 
 ## Chạy thử nhanh (không cần Docker)
@@ -39,6 +40,6 @@ cd FE && npm run lint && npm run test -- --run && npm run build
 
 - BE yêu cầu header `Idempotency-Key` ở vài thao tác điểm nhưng chưa lưu/phát lại phản hồi; duyệt và ghi điểm vẫn không bị ghi trùng nhờ ràng buộc DB.
 - Chưa có endpoint tách/gộp task, hủy phạm vi trả quỹ về dự phòng, rời nhóm giữa chừng (spec nhắc nhưng mục 12.9 không có API) — xem `docs/SPEC_ISSUES.md`.
-- Đồng hồ demo chạy lệch ngày thật của trình duyệt nên một số mốc thời gian hiển thị chưa trùng; S10 đang hiện trạng thái "Đang thực hiện" hai lần (lỗi hiển thị nhỏ).
-- QA bằng mắt chưa phủ S07, S10 và S05 ở 1280px (chỉ kiểm bằng DOM/API). Ảnh chụp các màn còn lại ở `docs/screenshots/`.
+- Đồng hồ demo chạy lệch ngày thật của trình duyệt nên một số mốc thời gian hiển thị chưa trùng.
+- QA bằng mắt chưa phủ S07 và S05 ở 1280px (chỉ kiểm bằng DOM/API). Ảnh chụp các màn còn lại ở `docs/screenshots/`.
 - UI chỉ có tiếng Việt (chuỗi tập trung ở `FE/src/i18n/vi.ts`, thêm `ja.ts` được); minh chứng chỉ là URL, chưa upload tệp.

@@ -141,11 +141,14 @@ function PointTasks() {
               <CardChips>
                 <StatusChip size="sm" {...chip('pointTask', row.status)} />
                 {row.heldForRequest ? <StatusChip size="sm" tone="pending" label={t('myPoints.tasks.held')} /> : null}
+                {row.source === PointTaskSource.TAKEN_OVER && row.status !== PointTaskStatus.AWARDED ? (
+                  <StatusChip size="sm" tone="pending" label={t('myPoints.tasks.pendingNoPoints')} />
+                ) : null}
               </CardChips>
               {row.transferredTo ? <p className={styles.muted}>{t('myPoints.tasks.transferredTo', { name: row.transferredTo.name })}</p> : null}
               {row.helpRequestId && row.workId ? (
                 <CardActions>
-                  <ButtonLink variant="secondary" to={paths.helpWork(groupId, row.helpRequestId)}>
+                  <ButtonLink variant="secondary" to={paths.task(groupId, row.taskId)}>
                     {t('myPoints.tasks.openWork')}
                   </ButtonLink>
                 </CardActions>

@@ -593,6 +593,11 @@ Query `cycleId?`. Response `200` `MemberProgressDetail` = `{ cycle, progress: Me
 ```
 Lỗi: `404 NOT_FOUND` (userId không thuộc nhóm).
 
+#### `GET /groups/{groupId}/dashboard/members/{userId}/tasks`  *(Solution 2 · L1)*
+**Vai trò:** **LEAD** (Member → `403 LEAD_ONLY`; người ngoài nhóm → `404 NOT_A_GROUP_MEMBER`) · **Màn hình:** S03 (TL bấm một khung Member) · **Owner:** BE-B1 (`dashboard`) · **Idempotency:** —
+**TOÀN BỘ** task Member đang phụ trách (task trong tuần, tồn đọng, đã hoàn thành — không giới hạn một kỳ). Server phân nhóm và sắp xếp, FE giữ nguyên thứ tự: `OVERDUE` (quá deadline hiện tại mà chưa có kết quả hợp lệ — task nộp ĐÚNG hạn đang chờ TL duyệt **không** thuộc nhóm này) → `NEEDS_HELP` (Member đã bấm `Cần giúp đỡ`, TL chưa đóng đề nghị riêng) → `ACTIVE` → `AWAITING_REVIEW` (nhãn riêng) → `DONE` (cuối). Trong nhóm: `deadline` tăng dần, rồi tên. Mỗi task chỉ MỘT dòng: vừa quá hạn vừa cần giúp ⇒ `section=OVERDUE` + `needsHelp=true`.
+Response `200` `MemberTaskBoard` = `{ member, serverTime, counts: Record<MemberTaskSection, number>, tasks: MemberTaskBoardRow[] }`; mỗi dòng: `task: TaskSummary`, `section`, `overdue`, `needsHelp`, `awaitingReview`, `done`, `supportRequestId`/`supportRequestStatus` (**chỉ id** — nội dung riêng đọc ở S07), `helpRequestId`/`helpRequestStatus` (đã `Đưa lên Workspace`), `canPublishToWorkspace` + `publishBlockedCode`/`publishBlockedMessage`. `canPublishToWorkspace` dùng đúng điều kiện của `POST /groups/{id}/help-requests` (`TASK_ALREADY_DONE`, `TASK_AWAITING_REVIEW`, `TASK_NOT_TRANSFERABLE`, `HELP_REQUEST_ALREADY_OPEN`, `INDEPENDENT_REVIEWER_REQUIRED`), nên nút bật ⇒ đăng được. `Đưa lên Workspace` mở form đăng ở S08 (`?create=1&taskId=&supportRequestId=`); nội dung, đầu ra, deadline, độ khó và toàn bộ `P_t` do server lấy từ task gốc.
+
 ---
 
 ### E. Thông báo *(BE-A · `notification`)*
@@ -715,9 +720,10 @@ Query `roundId?`: mặc định vòng mới nhất; có ID thì phải thuộc t
                      "submittedAt": "2026-11-20T12:30:00Z", "deadline": "2026-11-20T13:00:00Z", "isOnTime": true,
                      "isReviewTarget": true, "review": null, "supportSubmissionId": null } ],
   "acceptedSubmissionId": null, "completedAt": null, "acceptedAt": null, "completedLate": false,
-  "independentReviewer": null, "lastProgress": null, "helpRequestId": null,
+  "independentReviewer": null, "lastProgress": null, "helpRequestId": null, "supportWorkId": null, "lastSupportWorkId": null,
   "checkpoint": { "cycle": { "…": "CycleRef" }, "myReportState": "NOT_RESPONDED", "reportWindowOpen": true } }
 ```
+`supportWorkId` = phần việc hỗ trợ **đang hoạt động** của task; `lastSupportWorkId` = phần việc gần nhất kể cả đã nghiệm thu/hoàn trả — S05 dùng để hiển thị khối **Nhận làm thay** và lịch sử bàn giao (không có màn S10/S11). Phần việc của yêu cầu đã `CANCELLED` không còn "giữ" task: người thực hiện hiện tại nộp như task thường.
 S05 hiển thị riêng `submittedAt`, `acceptedAt`, `originalDeadline` và `deadline` vòng hiện tại. Task chuyển cho Helper: `originalAssignee` ≠ `currentExecutor`; `points.currentRecipient` = Helper. Lỗi: `404 NOT_FOUND`.
 
 #### `GET /tasks/{taskId}/history`
@@ -784,7 +790,7 @@ Lỗi: `403 LEAD_ONLY`, `400 VALIDATION_FAILED` (người thực hiện không p
 ### G. Nộp minh chứng & quyết định TL, chuyển kỳ *(BE-B · `task`)*
 
 #### `POST /task-rounds/{roundId}/submissions`
-**Vai trò:** ASSIGNEE (người thực hiện hiện tại trong kế hoạch/bàn giao hiệu lực) · **Màn hình:** S05 (`Gửi kết quả`), S06 (nộp trước khi xác nhận) · **Owner:** BE-B · **Idempotency:** RECOMMENDED
+**Vai trò:** ASSIGNEE (người thực hiện hiện tại trong kế hoạch/bàn giao hiệu lực — **kể cả Helper** sau bàn giao; Solution 2 không có màn nộp riêng) · **Màn hình:** S05 (`Gửi kết quả`), S06 (nộp trước khi xác nhận) · **Owner:** BE-B · **Idempotency:** RECOMMENDED
 Nộp minh chứng → task `SUBMITTED` (**không** `DONE`). Cho nộp **nhiều lần** trước `closesAt` của kỳ chứa vòng (mọi bản cũ được giữ; bản mới nhất là bản TL xét). Request `SubmitResultRequest`:
 | Trường | Kiểu | Bắt buộc | Ràng buộc |
 |---|---|---|---|
@@ -792,7 +798,7 @@ Nộp minh chứng → task `SUBMITTED` (**không** `DONE`). Cho nộp **nhiều
 | `resultNote` | string\|null | | ≤2000 |
 | `evidence` | `EvidenceItem[]` | ✔ | 1–5 mục `{type:"URL", url (https, ≤2048), label?}` (khớp `evidence jsonb` ở DB) |
 
-`submittedAt` do server cấp sau khi lấy khóa kỳ; `isOnTime = submittedAt <= deadline`. Response `201` `SubmitResultResponse` = `{ submission: TaskSubmission, task: TaskSummary }`.
+`submittedAt` do server cấp sau khi lấy khóa kỳ; `isOnTime = submittedAt <= deadline`. Với task đã bàn giao (có phần việc hỗ trợ đang hoạt động) server ghi bản nộp qua đường chung với `POST /support-works/{id}/submissions`: tạo **một** `TaskSubmission` được liên kết `support_submissions` + contribution `PENDING_CONFIRMATION`, nên khoản điểm duy nhất sau này ghi đúng cho Helper. Người không phải người thực hiện hiện tại (kể cả người gốc sau bàn giao) → `403 NOT_ASSIGNEE`. Response `201` `SubmitResultResponse` = `{ submission: TaskSubmission, task: TaskSummary }`.
 Lỗi: `403 NOT_ASSIGNEE`, `409 ROUND_NOT_ACTIVE`, `409 NO_EFFECTIVE_PLAN`, `409 PLAN_CHANGED`, `409 SUBMISSION_WINDOW_CLOSED` (đã quá `closesAt`; chờ TL chốt vòng sau), `422 EVIDENCE_REQUIRED`, `400 VALIDATION_FAILED` (URL sai).
 
 #### `GET /task-rounds/{roundId}/submissions`
@@ -994,7 +1000,7 @@ Request `ResolveRiskRequest`: `note?`, `version` ✔. `OPEN`/`CONFIRMED` → `RE
 
 ### J. Hỗ trợ công khai, tự nguyện đề nghị, bàn giao *(BE-B · `help`)*
 
-Luồng: TL đăng **toàn bộ task** → thành viên **tự nguyện** `offer` → TL chọn (`accept-offer`) → Helper làm & nộp (S10) → TL duyệt (S11, qua `POST /task-submissions/{id}/review`). Không có phân công tự động, không có endpoint "từ chối/bỏ qua" (BR06), không tạo `CompensationAgreement`. **P_t do server điền**, nhận trong `points` (không có input điểm).
+Luồng: TL đăng **toàn bộ task** → thành viên **tự nguyện** `offer` → TL chọn (`accept-offer`) → Helper làm & nộp **ngay trong task (S05/S06)** → TL duyệt ở khung duyệt chung của task (qua `POST /task-submissions/{id}/review`). *Solution 2:* không còn màn thực hiện (S10) hay nghiệm thu (S11) riêng; `/help/:id/work|review` chỉ là link cũ chuyển hướng về task. Các endpoint `support-works/*` (xem lịch sử, `unable`, `resolve-discussion`) vẫn dùng, hiển thị trong S05. Không có phân công tự động, không có endpoint "từ chối/bỏ qua" (BR06), không tạo `CompensationAgreement`. **P_t do server điền**, nhận trong `points` (không có input điểm).
 
 **`HelpRequestCard`** (thẻ S08/S03) — trường chính: `id, groupId, title, descriptionPreview, expectedOutput, task, postedBy, beneficiary, deadline, difficulty, estimatedEffortMinutes, points (PointAmount|null), pointLabel, status, statusLabel, myRoleInRequest, myOfferStatus, workId, createdAt`.
 ```json
@@ -1445,6 +1451,10 @@ Nghiệm thu chạy bằng test tích hợp (Zonky + `Clock` cố định) gọi
 | `OFFER_NOT_PENDING` | 409 | Offer không còn `PENDING` | `withdraw`, `reconfirm`, `accept-offer` |
 | `OFFER_NEEDS_RECONFIRMATION` | 409 | Phạm vi đã đổi, Helper chưa xác nhận lại | `accept-offer` |
 | `HELP_REQUEST_HAS_HELPER` | 409 | Hủy khi đã có người nhận | `POST …/cancel` |
+| `CARRYOVER_REQUIRED` | 409 | Kỳ của task đã chốt mà TL chưa chuyển kỳ: phải `carryover` trước khi đăng/chấp thuận hỗ trợ (T-07) | `POST /groups/{id}/help-requests`, `accept-offer`, cờ `publishBlockedCode` |
+| `OFFER_HELPER_NOT_ACTIVE` | 409 | Người đề nghị đã rời nhóm nên không thể được chọn (T-12) | `POST …/accept-offer` |
+| `SUPPORT_REQUEST_ALREADY_OPEN` | 409 | Đã có đề nghị hỗ trợ riêng chưa đóng của cùng người gửi cho task này (T-10) | `POST /tasks/{id}/support-requests` |
+| `RATE_LIMITED` | 429 | Đăng nhập sai quá 5 lần/5 phút (theo địa chỉ + email) hoặc 30 lần/5 phút (theo địa chỉ) (H-02) | `POST /auth/login` |
 | `WORK_NOT_SUBMITTABLE` | 409 | Work chưa/không thể nộp (đã nộp, chờ TL chốt vòng, …) | `POST /support-works/{id}/submissions` |
 | `WORK_INVALID_STATE` | 409 | Work không ở trạng thái phù hợp | `unable`, `resolve-discussion` |
 | `POINT_POLICY_NOT_ACTIVE` | 409 | Chưa có phương án điểm | `simulate`, `simulation-candidates` |

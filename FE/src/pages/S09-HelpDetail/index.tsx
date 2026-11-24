@@ -106,7 +106,7 @@ function Detail({ data, groupId, onReload }: { data: HelpRequestDetail; groupId:
         {can(HelpRequestAction.ACCEPT_OFFER) || data.offers.length > 0 ? <OffersBlock data={data} groupId={groupId} onReload={onReload} /> : null}
         {can(HelpRequestAction.OPEN_WORK) ? (
           <div>
-            <ButtonLink to={paths.helpWork(groupId, data.id)} icon="arrow-right">
+            <ButtonLink to={paths.task(groupId, data.task.id)} icon="arrow-right">
               {t('helpDetail.openWork')}
             </ButtonLink>
           </div>
@@ -262,8 +262,9 @@ function OffersBlock({ data, groupId, onReload }: { data: HelpRequestDetail; gro
   const offers = data.offers.filter((offer) => !hidden.includes(offer.id))
 
   useEffect(() => {
-    if (accepted) navigate(paths.helpWork(groupId, data.id))
-  }, [accepted, groupId, data.id, navigate])
+    // Sau khi chấp thuận, cùng task xuất hiện trong My Tasks của Helper: về chi tiết task, không có màn thực hiện riêng.
+    if (accepted) navigate(paths.task(groupId, data.task.id))
+  }, [accepted, groupId, data.task.id, navigate])
 
   return (
     <Card as="section" aria-labelledby="offers-heading">

@@ -16,6 +16,13 @@ describe('pathForTarget (ScreenTarget do server gợi ý → URL)', () => {
     expect(pathForTarget({ screen: 'S12', params: { groupId: 'g' } })).toBe(paths.points('g'))
   })
 
+  it('[S2-D13] thông báo S10/S11 dẫn về CHÍNH task (không còn màn thực hiện/nghiệm thu hỗ trợ riêng); thiếu taskId mới dùng link cũ vốn chỉ chuyển hướng về task', () => {
+    expect(pathForTarget({ screen: 'S10', params: { groupId: 'g', workId: 'w', taskId: 't' } })).toBe('/groups/g/tasks/t')
+    expect(pathForTarget({ screen: 'S11', params: { groupId: 'g', helpRequestId: 'h', taskId: 't' } })).toBe('/groups/g/tasks/t')
+    expect(pathForTarget({ screen: 'S10', params: { groupId: 'g', workId: 'w' } })).toBe('/groups/g/help/w/work')
+    expect(pathForTarget({ screen: 'S10', params: { groupId: 'g' } })).toBe('/groups/g')
+  })
+
   it('thiếu tham số → về trang chủ nhóm / S01', () => {
     expect(pathForTarget({ screen: 'S05', params: { groupId: 'g' } })).toBe('/groups/g')
     expect(pathForTarget({ screen: 'S05', params: {} })).toBe('/groups')

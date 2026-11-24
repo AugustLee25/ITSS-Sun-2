@@ -6,6 +6,7 @@ import app.hanare.auth.AuthDtos.GoogleLoginRequest;
 import app.hanare.auth.AuthDtos.LoginRequest;
 import app.hanare.auth.AuthDtos.RegisterRequest;
 import app.hanare.auth.AuthDtos.UserProfile;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,8 +39,9 @@ class AuthController {
 	}
 
 	@PostMapping("/login")
-	AuthResponse login(@Valid @RequestBody LoginRequest request) {
-		return service.login(request);
+	AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+		// Địa chỉ TCP thật: không tin X-Forwarded-For (kẻ tấn công tự đặt được để né giới hạn).
+		return service.login(request, http.getRemoteAddr());
 	}
 
 	@PostMapping("/google")

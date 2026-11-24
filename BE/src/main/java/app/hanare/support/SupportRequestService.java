@@ -99,6 +99,13 @@ public class SupportRequestService {
 		UUID roundId = f.roundId();
 		app.hanare.task.WorkflowLocks.round(jdbc, roundId);
 		app.hanare.task.TaskWritePolicy.requireRoundExecution(jdbc, roundId, clock.instant());
+		// T-10: mỗi người chỉ có MỘT đề nghị riêng chưa đóng cho một task (chống spam thông báo + cờ "Cần hỗ trợ" khó tắt)
+		boolean open = jdbc.sql("SELECT EXISTS (SELECT 1 FROM support_requests WHERE task_id = :t AND requester_id = :u AND status <> 'RESOLVED')")
+				.param("t", taskId).param("u", user.id()).query(Boolean.class).single();
+		if (open) {
+			throw Err.conflict("SUPPORT_REQUEST_ALREADY_OPEN",
+					"Bạn đã gửi đề nghị hỗ trợ cho task này và TL chưa xử lý xong. Hãy chờ phản hồi của TL.");
+		}
 		if (req.roundId() != null) {
 			boolean ok = roundId.equals(req.roundId());
 			if (!ok) {

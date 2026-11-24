@@ -4,6 +4,7 @@ import app.hanare.common.ErrorCode;
 import app.hanare.config.HanareProperties;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
@@ -14,6 +15,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -56,12 +59,19 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	SecretKey jwtSecretKey(HanareProperties props) {
+	SecretKey jwtSecretKey(HanareProperties props, Environment env) {
 		String secret = props.jwt().secret();
+		if ((secret == null || secret.isBlank()) && env.acceptsProfiles(Profiles.of("demo", "dev"))) {
+			// H-01: không có secret mặc định công khai trong repo. Demo/dev tự sinh khóa ngẫu nhiên mỗi lần khởi động
+			// (token cũ hết hiệu lực khi khởi động lại — dữ liệu demo cũng nạp lại từ đầu); muốn cố định thì đặt HANARE_JWT_SECRET.
+			byte[] random = new byte[48];
+			new SecureRandom().nextBytes(random);
+			return new SecretKeySpec(random, "HmacSHA256");
+		}
 		if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
 			throw new IllegalStateException(
 					"HANARE_JWT_SECRET (hanare.jwt.secret) phải có ít nhất 32 byte. Đặt biến môi trường HANARE_JWT_SECRET "
-							+ "hoặc dùng profile dev/test.");
+							+ "(profile demo/dev tự sinh khóa ngẫu nhiên khi không đặt).");
 		}
 		return new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
 	}

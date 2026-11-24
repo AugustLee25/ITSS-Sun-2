@@ -28,6 +28,21 @@ const AUTH: AuthResponse = {
 }
 
 describe('S00 — đăng nhập', () => {
+  it('[H-02] bị giới hạn đăng nhập (429): hiện đúng thông báo của server (còn bao lâu), không báo "sai mật khẩu" và không đăng nhập', async () => {
+    mockApi([
+      ['GET', '/auth/config', { googleEnabled: false, passwordMinLength: 8, demoMode: false }],
+      ['POST', '/auth/login', apiError(429, 'RATE_LIMITED', 'Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 120 giây.')],
+    ])
+    const user = userEvent.setup()
+    renderApp('/login', { signedIn: false })
+    await user.type(await screen.findByLabelText(/^Email/), 'an@example.com')
+    await user.type(screen.getByLabelText(/^Mật khẩu/), 'mat-khau-dung')
+    await user.click(screen.getByRole('button', { name: 'Đăng nhập' }))
+    expect(await screen.findByText(/thử lại sau 120 giây/)).toBeInTheDocument()
+    expect(screen.queryByText(/Email hoặc mật khẩu chưa đúng/)).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'HANARE' })).toBeInTheDocument()
+  })
+
   it('giữ lời mời + đích cũ, Google tắt có giải thích, lỗi đăng nhập ở lại S00, thành công vào S02 xác nhận tham gia', async () => {
     const api = mockApi([
       ['GET', '/auth/config', { googleEnabled: false, passwordMinLength: 8, demoMode: false }],

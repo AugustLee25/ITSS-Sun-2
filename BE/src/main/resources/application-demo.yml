@@ -2,8 +2,9 @@
 # hoặc chạy bằng DemoRunner (PostgreSQL nhúng, không cần Docker): xem run-demo.cmd.
 hanare:
   jwt:
-    # CHỈ demo. Token sống 30 ngày để việc tua đồng hồ không làm người xem bị đăng xuất.
-    secret: ${HANARE_JWT_SECRET:demo-only-hanare-jwt-secret-change-me-0123456789}
+    # Không có secret mặc định trong repo (H-01): để trống thì mỗi lần khởi động tự sinh khóa ngẫu nhiên; đặt HANARE_JWT_SECRET
+    # (>= 32 byte) nếu muốn token sống qua lần khởi động lại. Token sống 30 ngày để tua đồng hồ không làm người xem bị đăng xuất.
+    secret: ${HANARE_JWT_SECRET:}
     ttl: P30D
 
 logging:

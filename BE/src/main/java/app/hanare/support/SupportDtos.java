@@ -1,5 +1,6 @@
 package app.hanare.support;
 
+import app.hanare.common.TrimmedSize;
 import app.hanare.points.Refs.UserRef;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -28,8 +29,8 @@ public final class SupportDtos {
 	}
 
 	public record CreateSupportRequestRequest(@NotNull ObstacleType obstacleType,
-			@NotNull @Size(min = 10, max = 2000) String description,
-			@NotNull @Size(min = 5, max = 1000) String neededSupport, @Size(max = 1000) String impact,
+			@NotNull @TrimmedSize(min = 10, max = 2000) String description,
+			@NotNull @TrimmedSize(min = 5, max = 1000) String neededSupport, @Size(max = 1000) String impact,
 			LocalDate expectedDate, UUID roundId) {
 	}
 
@@ -50,7 +51,7 @@ public final class SupportDtos {
 	}
 
 	public record CreateRiskReportRequest(@NotNull RiskType riskType, UUID taskId, UUID subjectUserId,
-			@NotNull @Size(min = 5, max = 500) String publicSummary, List<UUID> affectedTaskIds) {
+			@NotNull @TrimmedSize(min = 5, max = 500) String publicSummary, List<UUID> affectedTaskIds) {
 	}
 
 	public record ResolveRiskRequest(@Size(max = 1000) String note, @NotNull Long version) {

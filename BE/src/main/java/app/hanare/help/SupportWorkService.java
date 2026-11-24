@@ -100,16 +100,26 @@ public class SupportWorkService {
 	@Transactional
 	public SubmitSupportResultResponse submit(UUID workId, CurrentUser user, String idempotencyKey,
 			SubmitSupportResultRequest req) {
-		return submitInternal(workId, user, idempotencyKey, req, false);
+		return submitInternal(workId, user, idempotencyKey, req, false, true);
 	}
 
 	@Transactional
 	public SubmitSupportResultResponse submitForReport(UUID workId, CurrentUser user, SubmitSupportResultRequest req) {
-		return submitInternal(workId, user, null, req, true);
+		return submitInternal(workId, user, null, req, true, false);
 	}
 
-	private SubmitSupportResultResponse submitInternal(UUID workId, CurrentUser user, String idempotencyKey, SubmitSupportResultRequest req, boolean fromReport) {
-		if (!fromReport) IdempotencyKey.require(idempotencyKey);
+	/**
+	 * Solution 2: Helper nộp bằng popup "Nộp kết quả" của Solution 1 (S05). Đi cùng đường ghi với S06/support-works
+	 * để bản nộp luôn được liên kết với contribution; khóa idempotency là tùy chọn như client Solution 1.
+	 */
+	@Transactional
+	public SubmitSupportResultResponse submitViaTask(UUID workId, CurrentUser user, String idempotencyKey,
+			SubmitSupportResultRequest req) {
+		return submitInternal(workId, user, idempotencyKey, req, false, false);
+	}
+
+	private SubmitSupportResultResponse submitInternal(UUID workId, CurrentUser user, String idempotencyKey, SubmitSupportResultRequest req, boolean fromReport, boolean requireKey) {
+		if (requireKey) IdempotencyKey.require(idempotencyKey);
 		Work w0 = views.work(workId);
 		access.requireMember(w0.projectId(), user);
 		app.hanare.task.WorkflowLocks.project(jdbc, w0.projectId());
@@ -249,7 +259,7 @@ public class SupportWorkService {
 		Optional<BudgetFacts> budget = tasks.budget(r.taskId()).filter(b -> "FUNDED".equals(b.state()));
 		boolean returned = false;
 		if (budget.isPresent() && budget.get().recipientId().equals(w.helperId())) {
-			handoff.swapAssignment(w.projectId(), budget.get(), r.beneficiaryId(), r.id(), workId, lead.userId(), now);
+			handoff.swapAssignment(w.projectId(), budget.get(), r.beneficiaryId(), r.id(), null, lead.userId(), now); // T-01: không mang workId của work đã hủy
 			returned = true;
 		}
 		if (f.hasEffectivePlan() && !"ACCEPTED".equals(f.roundState()) && w.helperId().equals(f.assigneeId())) {

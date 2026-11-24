@@ -159,8 +159,6 @@ describe('route nhóm, 403/404', () => {
       ['/groups/g1/tasks', 'Công việc'],
       ['/groups/g1/help', 'Cùng nhau hỗ trợ'],
       ['/groups/g1/help/r1', 'Không tìm thấy nội dung'],
-      ['/groups/g1/help/r1/work', 'Thực hiện & Bàn giao hỗ trợ'],
-      ['/groups/g1/help/r1/review', 'Xác nhận kết quả & Ghi điểm'],
       ['/groups/g1/points', 'Điểm của tôi & Sổ đóng góp'],
     ]
     for (const [path, heading] of cases) {

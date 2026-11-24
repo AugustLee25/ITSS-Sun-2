@@ -129,6 +129,10 @@ public class TaskService {
 			catch(IllegalArgumentException ex) { throw ApiException.validation("cycleId","Kỳ không hợp lệ."); }
 			s.cycle(cycle);
 		}
+		if (q.get("assigneeId") != null && !q.get("assigneeId").isBlank()) {
+			try { UUID.fromString(q.get("assigneeId")); }
+			catch (IllegalArgumentException ex) { throw ApiException.validation("assigneeId", "Người phụ trách không hợp lệ."); }
+		}
 		if(q.get("completion")!=null && !List.of("DONE","UNFINISHED","OVERDUE").contains(q.get("completion")))
 			throw ApiException.validation("completion","Bộ lọc tiến độ không hợp lệ.");
 		List<UUID> ids = q.get("cycleId") == null ? reader.currentRoundIds(projectId)
@@ -157,12 +161,27 @@ public class TaskService {
 		}
 		out.sort(Comparator.<Map<String, Object>, String>comparing(t -> (String) t.get("deadline"),
 				Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(t -> created.get((UUID) t.get("id"))));
-		int size = Math.min(Math.max(intOr(q.get("size"), 20), 1), 100);
-		int page = Math.max(intOr(q.get("page"), 0), 0);
+		// T-08: giá trị sai → 400 như mọi danh sách khác (không lặng lẽ kẹp về khoảng hợp lệ)
+		app.hanare.group.PageParams paging = app.hanare.group.PageParams.of(strictInt(q.get("page"), "page"), strictInt(q.get("size"), "size"));
+		int size = paging.size();
+		int page = paging.page();
 		int from = Math.min(page * size, out.size());
 		List<Map<String, Object>> slice = out.subList(from, Math.min(from + size, out.size()));
 		return J.o("items", slice, "page", page, "size", size, "totalItems", out.size(),
 				"totalPages", (out.size() + size - 1) / size);
+	}
+
+	/** Số nguyên bắt buộc đúng định dạng; null/rỗng → null (dùng mặc định). Sai định dạng → 400. */
+	private static Integer strictInt(String v, String field) {
+		if (v == null || v.isBlank()) {
+			return null;
+		}
+		try {
+			return Integer.valueOf(v.trim());
+		}
+		catch (NumberFormatException ex) {
+			throw ApiException.validation(field, "Phải là số nguyên.");
+		}
 	}
 
 	private static int intOr(String v, int d) {

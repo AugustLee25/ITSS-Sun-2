@@ -34,6 +34,29 @@ class DemoTest {
 	DemoClock clock;
 	JsonMapper mapper = JsonMapper.builder().build();
 
+	/** H-01: secret JWT cũ (hằng số công khai trong repo) không còn ký được token hợp lệ trên server demo. */
+	@Test
+	void tokenSignedWithTheOldPublicDefaultSecretIsRejected() throws Exception {
+		JsonNode accounts = get("/demo/accounts", null);
+		String leadId = null;
+		for (JsonNode a : accounts.path("items")) {
+			if ("LEAD".equals(a.path("role").asString())) {
+				leadId = a.path("userId").asString();
+			}
+		}
+		assertThat(leadId).isNotNull();
+		Instant now = clock.instant(); // cùng đồng hồ với server: nếu bị từ chối thì do CHỮ KÝ chứ không phải hết hạn
+		com.nimbusds.jwt.JWTClaimsSet claims = new com.nimbusds.jwt.JWTClaimsSet.Builder().issuer("hanare-be").subject(leadId)
+				.issueTime(java.util.Date.from(now)).expirationTime(java.util.Date.from(now.plusSeconds(3600)))
+				.jwtID(java.util.UUID.randomUUID().toString()).claim("email", "tl@hanare.demo").build();
+		com.nimbusds.jwt.SignedJWT forged = new com.nimbusds.jwt.SignedJWT(
+				new com.nimbusds.jose.JWSHeader(com.nimbusds.jose.JWSAlgorithm.HS256), claims);
+		forged.sign(new com.nimbusds.jose.crypto.MACSigner(
+				"demo-only-hanare-jwt-secret-change-me-0123456789".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+		org.assertj.core.api.Assertions.assertThatThrownBy(() -> get("/auth/me", forged.serialize()))
+				.isInstanceOf(org.springframework.web.client.HttpClientErrorException.Unauthorized.class);
+	}
+
 	RestClient http() {
 		return RestClient.create("http://localhost:" + env.getProperty("local.server.port") + "/api/v1");
 	}

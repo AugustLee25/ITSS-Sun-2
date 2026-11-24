@@ -8,7 +8,7 @@ import { SupportWorkResolution, type SupportWork } from '@/api/types'
 import { paths } from '@/app/routes'
 import { Button, Card, FormField, InlineError, Modal, Textarea, useToast } from '@/components'
 import { useT, type MessageKey } from '@/i18n'
-import styles from './HelpWork.module.css'
+import styles from './SupportWork.module.css'
 import { useSingleFlight } from './singleFlight'
 
 /** Helper: `Báo không thể hoàn thành` → `NEEDS_DISCUSSION`; không tự chuyển việc cho người khác, không trừ điểm. */

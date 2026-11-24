@@ -41,6 +41,19 @@ describe('taskQuery', () => {
 })
 
 describe('S04 — danh sách công việc', () => {
+  it('[S2-A1] My Tasks: task của tôi có nút `Cần giúp đỡ` (theo allowedActions do server tính); task không được phép thì không có', async () => {
+    mockApi([
+      ['GET', `/groups/${GROUP_ID}/tasks`, page([taskSummary({ id: 't-mine', title: 'Việc của tôi', allowedActions: ['REPORT_DIFFICULTY'] }), taskSummary({ id: 't-other', title: 'Việc người khác', allowedActions: [] })])],
+      ...commonRoutes(GroupRole.MEMBER),
+    ])
+    renderApp(`/groups/${GROUP_ID}/tasks`)
+    const mine = ((await screen.findByRole('link', { name: 'Việc của tôi' })).closest('article') as HTMLElement)
+    expect(within(mine).getByRole('link', { name: 'Cần giúp đỡ' })).toHaveAttribute('href', `/groups/${GROUP_ID}/tasks/t-mine/difficulty`)
+    const other = (screen.getByRole('link', { name: 'Việc người khác' }).closest('article') as HTMLElement)
+    expect(within(other).queryByRole('link', { name: 'Cần giúp đỡ' })).not.toBeInTheDocument()
+  })
+
+
   it('thành viên lưu task nháp cho chính mình khi chưa nhập đủ kế hoạch', async () => {
     const api = mockApi([
       ['GET', `/groups/${GROUP_ID}/tasks`, page([])],

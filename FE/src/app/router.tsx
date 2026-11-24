@@ -4,6 +4,7 @@ import { RequireAuth } from './RequireAuth'
 import { ForbiddenState, GroupNotFound, NotFoundPage, RouteErrorPage } from './ErrorPages'
 import { GroupLayout, RootLayout, UserLayout } from './layouts'
 import { ModalBackground } from './modal'
+import { SupportRedirect } from './SupportRedirect'
 import { patterns, paths } from './routes'
 
 /** Mỗi màn hình tải lười (lazy) từ `src/pages/SXX-*`; agent phụ trách chỉ sửa trong thư mục của mình. */
@@ -17,8 +18,6 @@ const S06 = lazy(() => import('@/pages/S06-Checkpoint'))
 const S07 = lazy(() => import('@/pages/S07-Difficulty'))
 const S08 = lazy(() => import('@/pages/S08-HelpBoard'))
 const S09 = lazy(() => import('@/pages/S09-HelpDetail'))
-const S10 = lazy(() => import('@/pages/S10-HelpExecution'))
-const S11 = lazy(() => import('@/pages/S11-Review'))
 const S12 = lazy(() => import('@/pages/S12-Points'))
 const S13 = lazy(() => import('@/pages/S13-Notifications'))
 const Kit = import.meta.env.DEV ? lazy(() => import('@/pages/__kit/KitPage')) : null
@@ -115,8 +114,9 @@ export const routes: RouteObject[] = [
               },
               { path: patterns.help, element: <S08 /> },
               { path: patterns.helpRequest, element: <S09 /> },
-              { path: patterns.helpWork, element: <S10 /> },
-              { path: patterns.helpReview, element: <S11 /> },
+              // Link cũ của màn thực hiện/nghiệm thu hỗ trợ: Solution 2 dùng chính task (S05) cho cả hai việc.
+              { path: patterns.helpWork, element: <SupportRedirect /> },
+              { path: patterns.helpReview, element: <SupportRedirect /> },
               { path: patterns.points, element: <S12 /> },
               { path: '*', element: <GroupNotFound /> },
             ],

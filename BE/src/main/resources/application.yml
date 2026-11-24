@@ -11,6 +11,12 @@ spring:
   web:
     resources:
       add-mappings: false
+  jackson:
+    # T-09: không ép ngầm kiểu — 1.5 không thành số nguyên 1, "true" (chuỗi) không thành boolean
+    deserialization:
+      accept-float-as-int: false
+    mapper:
+      allow-coercion-of-scalars: false
 
 server:
   port: 8080

@@ -1193,6 +1193,49 @@ export interface MemberProgressDetail {
   tasks: CycleTaskRow[];
 }
 
+/**
+ * Solution 2 · L1 — nhóm hiển thị của một dòng trong bảng "toàn bộ task của Member" (TL). Server phân nhóm + sắp xếp:
+ * OVERDUE (đỏ pastel, "Quá hạn") < NEEDS_HELP (vàng pastel, "Cần hỗ trợ") < ACTIVE < AWAITING_REVIEW (nhãn riêng) < DONE (cuối).
+ * Task vừa quá hạn vừa cần giúp chỉ MỘT dòng, nhóm OVERDUE kèm `needsHelp=true`.
+ */
+export const MemberTaskSection = {
+  OVERDUE: 'OVERDUE',
+  NEEDS_HELP: 'NEEDS_HELP',
+  ACTIVE: 'ACTIVE',
+  AWAITING_REVIEW: 'AWAITING_REVIEW',
+  DONE: 'DONE',
+} as const;
+export type MemberTaskSection = (typeof MemberTaskSection)[keyof typeof MemberTaskSection];
+
+export interface MemberTaskBoardRow {
+  task: TaskSummary;
+  section: MemberTaskSection;
+  /** deadline hiện tại đã qua mà chưa có kết quả hợp lệ (nộp ĐÚNG hạn đang chờ duyệt không tính). */
+  overdue: boolean;
+  /** Member đã bấm `Cần giúp đỡ` và TL chưa đóng đề nghị riêng. */
+  needsHelp: boolean;
+  awaitingReview: boolean;
+  done: boolean;
+  /** Chỉ id (TL mở S07 để đọc nội dung riêng); không bao giờ kèm nội dung. */
+  supportRequestId: Uuid | null;
+  supportRequestStatus: SupportRequestStatus | null;
+  /** Yêu cầu hỗ trợ công khai còn hiệu lực của task (đã `Đưa lên Workspace`). */
+  helpRequestId: Uuid | null;
+  helpRequestStatus: HelpRequestStatus | null;
+  /** Cùng điều kiện với POST /groups/{id}/help-requests. */
+  canPublishToWorkspace: boolean;
+  publishBlockedCode: string | null;
+  publishBlockedMessage: string | null;
+}
+
+/** `GET /groups/{groupId}/dashboard/members/{userId}/tasks` (chỉ TL). */
+export interface MemberTaskBoard {
+  member: UserRef;
+  serverTime: IsoInstant;
+  counts: Record<MemberTaskSection, number>;
+  tasks: MemberTaskBoardRow[];
+}
+
 // ═════════════════════════════ TASKS (BE-B) ═════════════════════════════
 
 export interface TaskPointsBrief {
@@ -1368,6 +1411,8 @@ export interface ProgressNote {
 
 export interface TaskDetail extends TaskSummary {
   carryoverProposal?: { reportItemId: Uuid; expectedCompletionAt: IsoInstant | null; note: string | null } | null;
+  /** Work hỗ trợ gần nhất của task (kể cả đã nghiệm thu/hoàn trả) — để xem lịch sử bàn giao ngay trong S05. */
+  lastSupportWorkId?: Uuid | null;
   supportWorkId?: Uuid | null;
   /** Phạm vi (từ bản hiệu lực, hoặc bản nháp nếu chưa duyệt). */
   description: string | null;
@@ -2527,6 +2572,12 @@ export interface ApiEndpoints {
     { cycleId?: Uuid },
     N,
     MemberProgressDetail
+  >;
+  'GET /groups/{groupId}/dashboard/members/{userId}/tasks': EndpointDef<
+    { groupId: Uuid; userId: Uuid },
+    N,
+    N,
+    MemberTaskBoard
   >;
 
   // ── Notifications ──

@@ -296,11 +296,15 @@ function ReportForm({
             </label>
           ))}
         </fieldset>
-        {d.risk === ReportRiskLevel.NEEDS_LEAD_HELP && item.canReportDifficulty && canEdit && !d.completed ? (
+        {item.canReportDifficulty ? (
           <p className={styles.muted}>
-            {t('checkpoint.needHelpHint')}{' '}
+            {d.risk === ReportRiskLevel.NEEDS_LEAD_HELP && canEdit && !d.completed ? (
+              <>
+                {t('checkpoint.needHelpHint')}{' '}
+              </>
+            ) : null}
             <Link to={paths.taskDifficulty(groupId, item.taskId)} preventScrollReset>
-              {t('checkpoint.needHelpLink')}
+              {t('checkpoint.needHelp')}
             </Link>
           </p>
         ) : null}
